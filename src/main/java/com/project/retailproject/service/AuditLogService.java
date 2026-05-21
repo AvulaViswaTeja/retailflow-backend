@@ -2,14 +2,13 @@ package com.project.retailproject.service;
 
 import com.project.retailproject.db.AuditLogRepository;
 import com.project.retailproject.db.UserRepository;
-import com.project.retailproject.dto.AuditLogRequestDTO;
 import com.project.retailproject.dto.AuditLogResponseDTO;
-import com.project.retailproject.exception.ResourceNotFoundException;
 import com.project.retailproject.model.AuditLog;
-import com.project.retailproject.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,25 +24,35 @@ public class AuditLogService {
     @Autowired
     private UserRepository userRepository;
 
-    // AuditLogs should only be created, never updated (immutable by design)
-    public AuditLogResponseDTO insertAuditLog(AuditLogRequestDTO dto) {
-        User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found with ID: " + dto.getUserId()));
 
-        AuditLog log = new AuditLog();
-        log.setUser(user);
-        log.setAction(dto.getAction());
-        log.setTimeStamp(LocalDateTime.now());
-
-        return mapToDTO(auditLogRepository.save(log));
+    public void log(String action) {
+        log(action, getCurrentUsername());
     }
 
+
+    public void log(String action, String performedByEmail) {
+        AuditLog log = new AuditLog();
+        log.setAction(action);
+        log.setTimeStamp(LocalDateTime.now());
+        userRepository.findByEmail(performedByEmail).ifPresent(log::setUser);
+        auditLogRepository.save(log);
+    }
+
+
+    public void logFailure(String action, String errorMessage) {
+        log(action + "_FAILED | Error: " + errorMessage);
+    }
+
+    public void logFailure(String action, String errorMessage, String performedByEmail) {
+        log(action + "_FAILED | Error: " + errorMessage, performedByEmail);
+    }
+
+
     public AuditLogResponseDTO getAuditLogById(Long id) {
-        AuditLog log = auditLogRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Audit log not found with ID: " + id));
-        return mapToDTO(log);
+        AuditLog logEntry = auditLogRepository.findById(id)
+                .orElseThrow(() -> new com.project.retailproject.exception
+                        .ResourceNotFoundException("Audit log not found with ID: " + id));
+        return mapToDTO(logEntry);
     }
 
     public List<AuditLogResponseDTO> getAllAuditLogs() {
@@ -68,7 +77,13 @@ public class AuditLogService {
         return auditLogRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-    // --- Mapper ---
+
+
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.isAuthenticated()) ? auth.getName() : "ANONYMOUS";
+    }
+
     private AuditLogResponseDTO mapToDTO(AuditLog a) {
         AuditLogResponseDTO dto = new AuditLogResponseDTO();
         dto.setAuditId(a.getAuditId());

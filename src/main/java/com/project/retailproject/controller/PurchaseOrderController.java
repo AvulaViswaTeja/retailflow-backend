@@ -1,10 +1,8 @@
 package com.project.retailproject.controller;
 
-import com.project.retailproject.common.ApiResponse;
 import com.project.retailproject.dto.PurchaseOrderRequestDTO;
 import com.project.retailproject.dto.PurchaseOrderResponseDTO;
 import com.project.retailproject.service.PurchaseOrderService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,50 +17,42 @@ public class PurchaseOrderController {
     private PurchaseOrderService purchaseOrderService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<PurchaseOrderResponseDTO>> createPurchaseOrder(
-            @Valid @RequestBody PurchaseOrderRequestDTO dto) {
-        PurchaseOrderResponseDTO data = purchaseOrderService.insertPurchaseOrder(dto);
-        return ResponseEntity.ok(ApiResponse.success("Purchase order created successfully", data));
-    }
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<PurchaseOrderResponseDTO>>> getAllPurchaseOrders() {
-        List<PurchaseOrderResponseDTO> data = purchaseOrderService.getAllPurchaseOrders();
-        return ResponseEntity.ok(ApiResponse.success("Purchase orders retrieved successfully", data));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<PurchaseOrderResponseDTO>> getPurchaseOrderById(
-            @PathVariable Long id) {
-        PurchaseOrderResponseDTO data = purchaseOrderService.getPurchaseOrderById(id);
-        return ResponseEntity.ok(ApiResponse.success("Purchase order retrieved successfully", data));
+    public ResponseEntity<PurchaseOrderResponseDTO> createPO(
+            @RequestBody PurchaseOrderRequestDTO dto) {
+        return ResponseEntity.ok(purchaseOrderService.insertPurchaseOrder(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<PurchaseOrderResponseDTO>> updatePurchaseOrder(
-            @PathVariable Long id,
-            @Valid @RequestBody PurchaseOrderRequestDTO dto) {
-        PurchaseOrderResponseDTO data = purchaseOrderService.updatePurchaseOrder(id, dto);
-        return ResponseEntity.ok(ApiResponse.success("Purchase order updated successfully", data));
+    public ResponseEntity<PurchaseOrderResponseDTO> updatePO(
+            @PathVariable Long id, @RequestBody PurchaseOrderRequestDTO dto) {
+        return ResponseEntity.ok(purchaseOrderService.updatePurchaseOrder(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> cancelPurchaseOrder(@PathVariable Long id) {
+    public ResponseEntity<Void> cancelPO(@PathVariable Long id) {
         purchaseOrderService.deletePurchaseOrder(id);
-        return ResponseEntity.ok(ApiResponse.success("Purchase order cancelled successfully", null));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PurchaseOrderResponseDTO> getPO(@PathVariable Long id) {
+        return ResponseEntity.ok(purchaseOrderService.getPurchaseOrderById(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<PurchaseOrderResponseDTO>> getAllPOs() {
+        return ResponseEntity.ok(purchaseOrderService.getAllPurchaseOrders());
     }
 
     @GetMapping("/supplier/{supplierId}")
-    public ResponseEntity<ApiResponse<List<PurchaseOrderResponseDTO>>> getBySupplier(
+    public ResponseEntity<List<PurchaseOrderResponseDTO>> getBySupplier(
             @PathVariable Long supplierId) {
-        List<PurchaseOrderResponseDTO> data = purchaseOrderService.getBySupplier(supplierId);
-        return ResponseEntity.ok(ApiResponse.success("Purchase orders retrieved successfully", data));
+        return ResponseEntity.ok(purchaseOrderService.getBySupplier(supplierId));
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<ApiResponse<List<PurchaseOrderResponseDTO>>> getByStatus(
+    public ResponseEntity<List<PurchaseOrderResponseDTO>> getByStatus(
             @PathVariable String status) {
-        List<PurchaseOrderResponseDTO> data = purchaseOrderService.getByStatus(status);
-        return ResponseEntity.ok(ApiResponse.success("Purchase orders retrieved successfully", data));
+        return ResponseEntity.ok(purchaseOrderService.getByStatus(status));
     }
 }

@@ -4,6 +4,7 @@ import com.project.retailproject.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -31,33 +32,33 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-                        // ✅ Public endpoints — no token needed
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // 🔒 Admin only
+                        .requestMatchers("/api/sales/**").hasAnyRole("ADMIN", "STORE_ASSOCIATE", "STORE_MANAGER")
+
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
 
-                        // 🔒 Inventory Manager + Admin
                         .requestMatchers("/api/inventory/**").hasAnyRole("ADMIN", "INVENTORY_MANAGER")
                         .requestMatchers("/api/purchase-orders/**").hasAnyRole("ADMIN", "INVENTORY_MANAGER")
 
-                        // 🔒 Finance Officer + Admin
                         .requestMatchers("/api/invoices/**").hasAnyRole("ADMIN", "FINANCE_OFFICER")
                         .requestMatchers("/api/payments/**").hasAnyRole("ADMIN", "FINANCE_OFFICER")
 
-                        // 🔒 Compliance Officer + Admin
                         .requestMatchers("/api/compliance-reports/**").hasAnyRole("ADMIN", "COMPLIANCE_OFFICER")
                         .requestMatchers("/api/audit-logs/**").hasAnyRole("ADMIN", "COMPLIANCE_OFFICER")
 
-                        // 🔒 Store Manager + Admin
                         .requestMatchers("/api/kpi-reports/**").hasAnyRole("ADMIN", "STORE_MANAGER")
 
-                        // 🔒 All authenticated users
                         .requestMatchers("/api/products/**").authenticated()
                         .requestMatchers("/api/catalogs/**").authenticated()
                         .requestMatchers("/api/sales/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/audit-logs/**")
+                        .hasAnyRole("ADMIN", "COMPLIANCE_OFFICER")
+                        .requestMatchers(HttpMethod.POST, "/api/audit-logs/**")
+                        .denyAll()
 
                         // Everything else needs auth
                         .anyRequest().authenticated()

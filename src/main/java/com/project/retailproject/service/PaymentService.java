@@ -27,6 +27,9 @@ public class PaymentService {
     @Autowired
     private InvoiceRepository invoiceRepository;
 
+    @Autowired
+    private AuditLogService auditLogService;
+
     @Transactional
     public PaymentResponseDTO insertPayment(PaymentRequestDTO dto) {
         Invoice invoice = invoiceRepository.findById(dto.getInvoiceId())
@@ -34,79 +37,112 @@ public class PaymentService {
                         "Invoice not found with ID: " + dto.getInvoiceId()));
 
         if (invoice.getStatus().equals("CANCELLED")) {
+            auditLogService.logFailure("Payment.PROCESS",
+                    "Attempt to pay CANCELLED InvoiceID: " + dto.getInvoiceId());
             throw new BadRequestException("Cannot pay a cancelled invoice");
         }
         if (invoice.getStatus().equals("PAID")) {
+            auditLogService.logFailure("Payment.PROCESS",
+                    "Attempt to pay already PAID InvoiceID: " + dto.getInvoiceId());
             throw new BadRequestException("Invoice is already fully paid");
         }
 
-        Payment payment = new Payment();
-        payment.setInvoice(invoice);
-        payment.setAmount(dto.getAmount());
-        payment.setMethod(dto.getMethod());
-        payment.setDate(LocalDate.now());
-        payment.setStatus("SUCCESS");
+        try {
+            Payment payment = new Payment();
+            payment.setInvoice(invoice);
+            payment.setAmount(dto.getAmount());
+            payment.setMethod(dto.getMethod());
+            payment.setDate(LocalDate.now());
+            payment.setStatus("SUCCESS");
 
-        Payment saved = paymentRepository.save(payment);
+            Payment saved = paymentRepository.save(payment);
 
-        // Update invoice status based on total paid
-        Double totalPaid = paymentRepository
-                .sumSuccessfulPaymentsByInvoiceId(invoice.getInvoiceId());
+            Double totalPaid = paymentRepository
+                    .sumSuccessfulPaymentsByInvoiceId(invoice.getInvoiceId());
+            if (totalPaid == null) totalPaid = 0.0;
 
-        if (totalPaid == null) totalPaid = 0.0;
+            String newInvoiceStatus;
+            if (totalPaid >= invoice.getAmount()) {
+                newInvoiceStatus = "PAID";
+            } else if (totalPaid > 0) {
+                newInvoiceStatus = "PARTIALLY_PAID";
+            } else {
+                newInvoiceStatus = invoice.getStatus();
+            }
 
-        if (totalPaid >= invoice.getAmount()) {
-            invoice.setStatus("PAID");
-        } else if (totalPaid > 0) {
-            invoice.setStatus("PARTIALLY_PAID");
+            invoice.setStatus(newInvoiceStatus);
+            invoiceRepository.save(invoice);
+
+            auditLogService.log("Payment.PROCESS_SUCCESS | PaymentID: " + saved.getPaymentId()
+                    + " | InvoiceID: " + dto.getInvoiceId()
+                    + " | Amount: " + dto.getAmount()
+                    + " | Method: " + dto.getMethod()
+                    + " | TotalPaid: " + totalPaid
+                    + " | InvoiceStatus: " + newInvoiceStatus);
+
+            return mapToDTO(saved, newInvoiceStatus);
+        } catch (Exception ex) {
+            auditLogService.logFailure("Payment.PROCESS", ex.getMessage());
+            throw ex;
         }
-
-        invoiceRepository.save(invoice);
-
-        return mapToDTO(saved, invoice.getStatus());
     }
 
     public PaymentResponseDTO updatePayment(Long id, PaymentRequestDTO dto) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Payment not found with ID: " + id));
-        payment.setMethod(dto.getMethod());
-        return mapToDTO(paymentRepository.save(payment), null);
+
+        String oldMethod = payment.getMethod();
+        try {
+            payment.setMethod(dto.getMethod());
+            PaymentResponseDTO result = mapToDTO(paymentRepository.save(payment), null);
+            auditLogService.log("Payment.UPDATE_SUCCESS | PaymentID: " + id
+                    + " | Method: " + oldMethod + " -> " + dto.getMethod());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("Payment.UPDATE", ex.getMessage());
+            throw ex;
+        }
     }
 
     public void deletePayment(Long id) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Payment not found with ID: " + id));
-        payment.setStatus("REFUNDED");
-        paymentRepository.save(payment);
+        try {
+            payment.setStatus("REFUNDED");
+            paymentRepository.save(payment);
+            auditLogService.log("Payment.REFUND_SUCCESS | PaymentID: " + id
+                    + " | InvoiceID: " + payment.getInvoice().getInvoiceId()
+                    + " | Amount: " + payment.getAmount()
+                    + " | Status: REFUNDED");
+        } catch (Exception ex) {
+            auditLogService.logFailure("Payment.REFUND", ex.getMessage());
+            throw ex;
+        }
     }
 
     public PaymentResponseDTO getPayment(Long id) {
-        Payment payment = paymentRepository.findById(id)
+        return mapToDTO(paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Payment not found with ID: " + id));
-        return mapToDTO(payment, null);
+                        "Payment not found with ID: " + id)), null);
     }
 
     public List<PaymentResponseDTO> getAllPayments() {
-        return paymentRepository.findAll()
-                .stream().map(p -> mapToDTO(p, null))
-                .collect(Collectors.toList());
+        return paymentRepository.findAll().stream()
+                .map(p -> mapToDTO(p, null)).collect(Collectors.toList());
     }
 
     public List<PaymentResponseDTO> getByInvoice(Long invoiceId) {
         return paymentRepository.findByInvoice_InvoiceId(invoiceId)
-                .stream().map(p -> mapToDTO(p, null))
-                .collect(Collectors.toList());
+                .stream().map(p -> mapToDTO(p, null)).collect(Collectors.toList());
     }
 
     public Page<PaymentResponseDTO> getAllPaymentsPaginated(Pageable pageable) {
-        return paymentRepository.findAll(pageable)
-                .map(p -> mapToDTO(p, null));
+        return paymentRepository.findAll(pageable).map(p -> mapToDTO(p, null));
     }
 
-    // --- Mapper ---
+
     private PaymentResponseDTO mapToDTO(Payment p, String invoiceStatus) {
         PaymentResponseDTO dto = new PaymentResponseDTO();
         dto.setPaymentId(p.getPaymentId());

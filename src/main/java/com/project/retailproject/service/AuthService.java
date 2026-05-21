@@ -24,20 +24,31 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Register
+    @Autowired
+    private AuditLogService auditLogService;
+
+
     public UserResponseDTO register(RegisterRequestDTO dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
+            auditLogService.log(
+                    "AUTH.REGISTER_FAILED | Error: Email already registered: " + dto.getEmail());
             throw new BadRequestException("Email already registered: " + dto.getEmail());
         }
 
         User user = new User();
         user.setUserName(dto.getUserName());
         user.setEmail(dto.getEmail());
-        user.setPassword(passwordEncoder.encode(dto.getPassword())); // hashed!
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole(dto.getRole());
         user.setPhoneNumber(dto.getPhoneNumber());
 
         User saved = userRepository.save(user);
+
+        auditLogService.log(
+                "AUTH.REGISTER_SUCCESS | UserID: " + saved.getUserId()
+                        + " | Email: " + saved.getEmail()
+                        + " | Role: " + saved.getRole(),
+                saved.getEmail());
 
         UserResponseDTO response = new UserResponseDTO();
         response.setUserId(saved.getUserId());
@@ -48,16 +59,33 @@ public class AuthService {
         return response;
     }
 
-    // Login
+
     public LoginResponseDTO login(LoginRequestDTO dto) {
-        User user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new BadRequestException("Invalid email or password"));
+        User user = userRepository.findByEmail(dto.getEmail()).orElse(null);
+
+
+        if (user == null) {
+
+            auditLogService.log(
+                    "AUTH.LOGIN_FAILED | Error: No account found for email: " + dto.getEmail());
+            throw new BadRequestException("Invalid email or password");
+        }
+
 
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+            auditLogService.logFailure(
+                    "AUTH.LOGIN",
+                    "Wrong password for email: " + dto.getEmail(),
+                    dto.getEmail());
             throw new BadRequestException("Invalid email or password");
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
+
+        auditLogService.log(
+                "AUTH.LOGIN_SUCCESS | Email: " + user.getEmail()
+                        + " | Role: " + user.getRole(),
+                user.getEmail());
 
         LoginResponseDTO response = new LoginResponseDTO();
         response.setToken(token);

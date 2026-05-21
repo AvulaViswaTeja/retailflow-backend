@@ -21,58 +21,85 @@ public class ComplianceReportService {
     @Autowired
     private ComplianceReportRepository complianceReportRepository;
 
-    // Generate new report
+    @Autowired
+    private AuditLogService auditLogService;
+
     public ComplianceReportResponseDTO insertComplianceReport(ComplianceReportRequestDTO dto) {
-        ComplianceReport report = new ComplianceReport();
-        report.setScope(dto.getScope());
-        report.setMetrics(dto.getMetrics());
-        report.setGeneratedDate(LocalDate.now());
-        report.setStatus("ACTIVE");
-        return mapToDTO(complianceReportRepository.save(report));
+        try {
+            ComplianceReport report = new ComplianceReport();
+            report.setScope(dto.getScope());
+            report.setMetrics(dto.getMetrics());
+            report.setGeneratedDate(LocalDate.now());
+            report.setStatus("ACTIVE");
+
+            ComplianceReportResponseDTO result = mapToDTO(complianceReportRepository.save(report));
+            auditLogService.log("ComplianceReport.GENERATE_SUCCESS | ReportID: " + result.getReportId()
+                    + " | Scope: " + dto.getScope()
+                    + " | GeneratedDate: " + result.getGeneratedDate()
+                    + " | Status: ACTIVE");
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("ComplianceReport.GENERATE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Update report
     public ComplianceReportResponseDTO updateComplianceReport(Long id, ComplianceReportRequestDTO dto) {
         ComplianceReport report = complianceReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Compliance report not found with ID: " + id));
-        report.setScope(dto.getScope());
-        report.setMetrics(dto.getMetrics());
-        return mapToDTO(complianceReportRepository.save(report));
+
+        String before = "Scope: " + report.getScope()
+                + " | Metrics: " + report.getMetrics();
+
+        try {
+            report.setScope(dto.getScope());
+            report.setMetrics(dto.getMetrics());
+
+            ComplianceReportResponseDTO result = mapToDTO(complianceReportRepository.save(report));
+            auditLogService.log("ComplianceReport.UPDATE_SUCCESS | ReportID: " + id
+                    + " | Before: " + before
+                    + " | After: Scope: " + dto.getScope()
+                    + " | Metrics: " + dto.getMetrics());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("ComplianceReport.UPDATE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Delete (soft)
     public void deleteComplianceReport(Long id) {
         ComplianceReport report = complianceReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Compliance report not found with ID: " + id));
-        report.setStatus("ARCHIVED");
-        complianceReportRepository.save(report);
+        try {
+            report.setStatus("ARCHIVED");
+            complianceReportRepository.save(report);
+            auditLogService.log("ComplianceReport.ARCHIVE_SUCCESS | ReportID: " + id
+                    + " | Scope: " + report.getScope()
+                    + " | Status: ARCHIVED");
+        } catch (Exception ex) {
+            auditLogService.logFailure("ComplianceReport.ARCHIVE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Get by ID
     public ComplianceReportResponseDTO getComplianceReport(Long id) {
-        ComplianceReport report = complianceReportRepository.findById(id)
+        return mapToDTO(complianceReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Compliance report not found with ID: " + id));
-        return mapToDTO(report);
+                        "Compliance report not found with ID: " + id)));
     }
 
-    // Get all
     public List<ComplianceReportResponseDTO> getAllComplianceReports() {
         return complianceReportRepository.findAll()
-                .stream().map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Get by scope
     public List<ComplianceReportResponseDTO> getByScope(String scope) {
         return complianceReportRepository.findByScope(scope)
-                .stream().map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Get latest by scope
     public ComplianceReportResponseDTO getLatestByScope(String scope) {
         ComplianceReport report = complianceReportRepository
                 .findFirstByScopeOrderByGeneratedDateDesc(scope);
@@ -81,20 +108,17 @@ public class ComplianceReportService {
         return mapToDTO(report);
     }
 
-    // Get by date range
     public List<ComplianceReportResponseDTO> getByDateRange(LocalDate start, LocalDate end) {
         return complianceReportRepository.findByGeneratedDateBetween(start, end)
-                .stream().map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Pagination
     public Page<ComplianceReportResponseDTO> getAllPagesWithPagination(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return complianceReportRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-    // --- Mapper ---
+
     private ComplianceReportResponseDTO mapToDTO(ComplianceReport r) {
         ComplianceReportResponseDTO dto = new ComplianceReportResponseDTO();
         dto.setReportId(r.getReportId());

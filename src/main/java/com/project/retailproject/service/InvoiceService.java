@@ -26,23 +26,38 @@ public class InvoiceService {
     @Autowired
     private SaleRepository saleRepository;
 
+    @Autowired
+    private AuditLogService auditLogService;
+
     public InvoiceResponseDTO insertInvoice(InvoiceRequestDTO dto) {
         Sale sale = saleRepository.findById(dto.getSaleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Sale not found with ID: " + dto.getSaleId()));
 
-        // One invoice per sale
         invoiceRepository.findBySale_SaleId(dto.getSaleId()).ifPresent(i -> {
-            throw new BadRequestException("Invoice already exists for sale ID: " + dto.getSaleId());
+            auditLogService.logFailure("Invoice.CREATE",
+                    "Duplicate invoice for SaleID: " + dto.getSaleId());
+            throw new BadRequestException(
+                    "Invoice already exists for sale ID: " + dto.getSaleId());
         });
 
-        Invoice invoice = new Invoice();
-        invoice.setSale(sale);
-        invoice.setAmount(dto.getAmount());
-        invoice.setDate(LocalDate.now());
-        invoice.setStatus("PENDING");
+        try {
+            Invoice invoice = new Invoice();
+            invoice.setSale(sale);
+            invoice.setAmount(dto.getAmount());
+            invoice.setDate(LocalDate.now());
+            invoice.setStatus("PENDING");
 
-        return mapToDTO(invoiceRepository.save(invoice));
+            InvoiceResponseDTO result = mapToDTO(invoiceRepository.save(invoice));
+            auditLogService.log("Invoice.CREATE_SUCCESS | InvoiceID: " + result.getInvoiceId()
+                    + " | SaleID: " + dto.getSaleId()
+                    + " | Amount: " + dto.getAmount()
+                    + " | Status: PENDING");
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("Invoice.CREATE", ex.getMessage());
+            throw ex;
+        }
     }
 
     public InvoiceResponseDTO updateInvoice(Long id, InvoiceRequestDTO dto) {
@@ -51,13 +66,28 @@ public class InvoiceService {
                         "Invoice not found with ID: " + id));
 
         if (invoice.getStatus().equals("PAID")) {
+            auditLogService.logFailure("Invoice.UPDATE",
+                    "Attempt to update PAID InvoiceID: " + id);
             throw new BadRequestException("Cannot update a paid invoice");
         }
 
-        invoice.setAmount(dto.getAmount());
-        invoice.setStatus(dto.getStatus());
+        String before = "Amount: " + invoice.getAmount()
+                + " | Status: " + invoice.getStatus();
 
-        return mapToDTO(invoiceRepository.save(invoice));
+        try {
+            invoice.setAmount(dto.getAmount());
+            invoice.setStatus(dto.getStatus());
+
+            InvoiceResponseDTO result = mapToDTO(invoiceRepository.save(invoice));
+            auditLogService.log("Invoice.UPDATE_SUCCESS | InvoiceID: " + id
+                    + " | Before: " + before
+                    + " | After: Amount: " + dto.getAmount()
+                    + " | Status: " + dto.getStatus());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("Invoice.UPDATE", ex.getMessage());
+            throw ex;
+        }
     }
 
     public void deleteInvoice(Long id) {
@@ -66,43 +96,50 @@ public class InvoiceService {
                         "Invoice not found with ID: " + id));
 
         if (invoice.getStatus().equals("PAID")) {
+            auditLogService.logFailure("Invoice.CANCEL",
+                    "Attempt to cancel PAID InvoiceID: " + id);
             throw new BadRequestException("Cannot cancel a paid invoice");
         }
 
-        invoice.setStatus("CANCELLED");
-        invoiceRepository.save(invoice);
+        try {
+            invoice.setStatus("CANCELLED");
+            invoiceRepository.save(invoice);
+            auditLogService.log("Invoice.CANCEL_SUCCESS | InvoiceID: " + id
+                    + " | SaleID: " + invoice.getSale().getSaleId()
+                    + " | Amount: " + invoice.getAmount()
+                    + " | Status: CANCELLED");
+        } catch (Exception ex) {
+            auditLogService.logFailure("Invoice.CANCEL", ex.getMessage());
+            throw ex;
+        }
     }
 
     public InvoiceResponseDTO findInvoiceById(Long id) {
-        Invoice invoice = invoiceRepository.findById(id)
+        return mapToDTO(invoiceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Invoice not found with ID: " + id));
-        return mapToDTO(invoice);
+                        "Invoice not found with ID: " + id)));
     }
 
     public List<InvoiceResponseDTO> findAllInvoices() {
-        return invoiceRepository.findAll()
-                .stream().map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return invoiceRepository.findAll().stream()
+                .map(this::mapToDTO).collect(Collectors.toList());
     }
 
     public List<InvoiceResponseDTO> getByStatus(String status) {
         return invoiceRepository.findByStatus(status)
-                .stream().map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     public List<InvoiceResponseDTO> getByDateRange(LocalDate start, LocalDate end) {
         return invoiceRepository.findByDateBetween(start, end)
-                .stream().map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     public Page<InvoiceResponseDTO> getAllInvoicesPaginated(Pageable pageable) {
         return invoiceRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-    // --- Mapper ---
+
     private InvoiceResponseDTO mapToDTO(Invoice i) {
         InvoiceResponseDTO dto = new InvoiceResponseDTO();
         dto.setInvoiceId(i.getInvoiceId());

@@ -70,7 +70,7 @@ public class KPIReportService {
                 .collect(Collectors.toList());
     }
 
-    // Soft delete
+
     public void deleteReport(Long id) {
         KPIReport report = kpiReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -85,7 +85,7 @@ public class KPIReportService {
         return kpiReportRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-    // --- Mapper ---
+
     private KPIReportResponseDTO mapToDTO(KPIReport r) {
         KPIReportResponseDTO dto = new KPIReportResponseDTO();
         dto.setReportId(r.getReportId());

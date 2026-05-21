@@ -1,12 +1,11 @@
 package com.project.retailproject.controller;
 
-import com.project.retailproject.common.ApiResponse;
 import com.project.retailproject.dto.NotificationRequestDTO;
 import com.project.retailproject.dto.NotificationResponseDTO;
 import com.project.retailproject.service.NotificationService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,61 +19,44 @@ public class NotificationController {
     private NotificationService notificationService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<NotificationResponseDTO>> insertNotification(
-            @Valid @RequestBody NotificationRequestDTO dto) {
-        NotificationResponseDTO data = notificationService.insertNotification(dto);
-        return ResponseEntity.ok(ApiResponse.success("Notification created successfully", data));
-    }
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<NotificationResponseDTO>>> getAllNotifications() {
-        List<NotificationResponseDTO> data = notificationService.getAllNotifications();
-        return ResponseEntity.ok(ApiResponse.success("Notifications retrieved successfully", data));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<NotificationResponseDTO>> getNotification(
-            @PathVariable Long id) {
-        NotificationResponseDTO data = notificationService.getNotification(id);
-        return ResponseEntity.ok(ApiResponse.success("Notification retrieved successfully", data));
+    public ResponseEntity<NotificationResponseDTO> createNotification(
+            @RequestBody NotificationRequestDTO dto) {
+        return ResponseEntity.ok(notificationService.insertNotification(dto));
     }
 
     @PatchMapping("/{id}/read")
-    public ResponseEntity<ApiResponse<NotificationResponseDTO>> markAsRead(
-            @PathVariable Long id) {
-        NotificationResponseDTO data = notificationService.markAsRead(id);
-        return ResponseEntity.ok(ApiResponse.success("Notification marked as read", data));
+    public ResponseEntity<NotificationResponseDTO> markAsRead(@PathVariable Long id) {
+        return ResponseEntity.ok(notificationService.markAsRead(id));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteNotification(@PathVariable Long id) {
         notificationService.deleteNotification(id);
-        return ResponseEntity.ok(ApiResponse.success("Notification deleted successfully", null));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<NotificationResponseDTO> getNotification(@PathVariable Long id) {
+        return ResponseEntity.ok(notificationService.getNotification(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<NotificationResponseDTO>> getAll() {
+        return ResponseEntity.ok(notificationService.getAllNotifications());
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<ApiResponse<List<NotificationResponseDTO>>> getByUser(
-            @PathVariable Long userId) {
-        List<NotificationResponseDTO> data = notificationService.getByUser(userId);
-        return ResponseEntity.ok(ApiResponse.success("Notifications retrieved successfully", data));
+    public ResponseEntity<List<NotificationResponseDTO>> getByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(notificationService.getByUser(userId));
     }
 
     @GetMapping("/user/{userId}/unread")
-    public ResponseEntity<ApiResponse<List<NotificationResponseDTO>>> getUnread(
-            @PathVariable Long userId) {
-        List<NotificationResponseDTO> data = notificationService.getUnread(userId);
-        return ResponseEntity.ok(ApiResponse.success("Unread notifications retrieved", data));
+    public ResponseEntity<List<NotificationResponseDTO>> getUnread(@PathVariable Long userId) {
+        return ResponseEntity.ok(notificationService.getUnread(userId));
     }
 
     @GetMapping("/paginated")
-    public ResponseEntity<ApiResponse<Page<NotificationResponseDTO>>> getPaginated(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "notificationId") String sorting,
-            @RequestParam(defaultValue = "true") boolean asc) {
-        Sort sort = asc ? Sort.by(sorting).ascending() : Sort.by(sorting).descending();
-        Page<NotificationResponseDTO> data = notificationService.getAllNotificationsPaginated(
-                PageRequest.of(page, size, sort));
-        return ResponseEntity.ok(ApiResponse.success("Notifications retrieved successfully", data));
+    public ResponseEntity<Page<NotificationResponseDTO>> getPaginated(Pageable pageable) {
+        return ResponseEntity.ok(notificationService.getAllNotificationsPaginated(pageable));
     }
 }

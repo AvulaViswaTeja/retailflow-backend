@@ -9,6 +9,7 @@ import com.project.retailproject.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,62 +21,110 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AuditLogService auditLogService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     public UserResponseDTO insertUser(UserRequestDTO dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
+            auditLogService.logFailure("User.CREATE",
+                    "Duplicate email: " + dto.getEmail());
             throw new BadRequestException("Email already registered: " + dto.getEmail());
         }
-        User user = mapToEntity(dto);
-        return mapToDTO(userRepository.save(user));
+        try {
+            User user = mapToEntity(dto);
+            UserResponseDTO result = mapToDTO(userRepository.save(user));
+
+
+            auditLogService.log("User.CREATE_SUCCESS | UserID: " + result.getUserId()
+                    + " | Name: " + result.getUserName()
+                    + " | Role: " + result.getRole()
+                    + " | Email: " + result.getEmail());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("User.CREATE", ex.getMessage());
+            throw ex;
+        }
     }
 
     public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found with ID: " + id));
-        user.setUserName(dto.getUserName());
-        user.setRole(dto.getRole());
-        user.setPhoneNumber(dto.getPhoneNumber());
-        return mapToDTO(userRepository.save(user));
+
+        String before = "Name: " + user.getUserName()
+                + " | Role: " + user.getRole()
+                + " | Phone: " + user.getPhoneNumber();
+
+        try {
+            user.setUserName(dto.getUserName());
+            user.setRole(dto.getRole());
+            user.setPhoneNumber(dto.getPhoneNumber());
+
+            // Re-hash password only if a new one is provided
+            if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+                user.setPassword(passwordEncoder.encode(dto.getPassword()));
+            }
+
+            UserResponseDTO result = mapToDTO(userRepository.save(user));
+            auditLogService.log("User.UPDATE_SUCCESS | UserID: " + id
+                    + " | Before: " + before
+                    + " | After: Name: " + dto.getUserName()
+                    + " | Role: " + dto.getRole()
+                    + " | Phone: " + dto.getPhoneNumber());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("User.UPDATE", ex.getMessage());
+            throw ex;
+        }
     }
 
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with ID: " + id);
-        }
-        userRepository.deleteById(id);
-    }
-
-    public UserResponseDTO getUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found with ID: " + id));
-        return mapToDTO(user);
+        try {
+            userRepository.deleteById(id);
+            auditLogService.log("User.DELETE_SUCCESS | UserID: " + id
+                    + " | Name: " + user.getUserName()
+                    + " | Email: " + user.getEmail()
+                    + " | Role: " + user.getRole());
+        } catch (Exception ex) {
+            auditLogService.logFailure("User.DELETE", ex.getMessage());
+            throw ex;
+        }
+    }
+
+    public UserResponseDTO getUser(Long id) {
+        return mapToDTO(userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with ID: " + id)));
     }
 
     public List<UserResponseDTO> getUsers() {
-        return userRepository.findAll()
-                .stream().map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return userRepository.findAll().stream()
+                .map(this::mapToDTO).collect(Collectors.toList());
     }
 
     public List<UserResponseDTO> getUsersByRole(String role) {
-        return userRepository.findByRole(role)
-                .stream().map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return userRepository.findByRole(role).stream()
+                .map(this::mapToDTO).collect(Collectors.toList());
     }
 
     public Page<UserResponseDTO> getAllUserPaginated(Pageable pageable) {
         return userRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-    // --- Mappers ---
+
     private User mapToEntity(UserRequestDTO dto) {
         User user = new User();
         user.setUserName(dto.getUserName());
         user.setRole(dto.getRole());
         user.setEmail(dto.getEmail());
         user.setPhoneNumber(dto.getPhoneNumber());
-        user.setPassword(dto.getPassword()); // will be hashed when JWT is added
+        user.setPassword(passwordEncoder.encode(dto.getPassword())); // hashed
         return user;
     }
 

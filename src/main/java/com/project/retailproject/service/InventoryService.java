@@ -23,97 +23,144 @@ public class InventoryService {
     @Autowired
     private ProductRepository productRepository;
 
-    // Add inventory
+    @Autowired
+    private AuditLogService auditLogService;
+
     public InventoryResponseDTO addInventory(InventoryRequestDTO dto) {
         Product product = productRepository.findById(dto.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Product not found with ID: " + dto.getProductId()));
 
-        // Check if inventory already exists for this product + location
         inventoryRepository.findByProductProductIdAndLocationId(
                         dto.getProductId(), dto.getLocationId())
-                .ifPresent(i -> { throw new BadRequestException(
-                        "Inventory already exists for this product at this location"); });
+                .ifPresent(i -> {
+                    auditLogService.logFailure("Inventory.CREATE",
+                            "Duplicate inventory | ProductID: " + dto.getProductId()
+                                    + " | LocationID: " + dto.getLocationId());
+                    throw new BadRequestException(
+                            "Inventory already exists for this product at this location");
+                });
 
-        Inventory inventory = new Inventory();
-        inventory.setProduct(product);
-        inventory.setLocationId(dto.getLocationId());
-        inventory.setQuantityOnHand(dto.getQuantityOnHand());
-        inventory.setSafetyStock(dto.getSafetyStock());
-        inventory.setStatus("ACTIVE");
+        try {
+            Inventory inventory = new Inventory();
+            inventory.setProduct(product);
+            inventory.setLocationId(dto.getLocationId());
+            inventory.setQuantityOnHand(dto.getQuantityOnHand());
+            inventory.setSafetyStock(dto.getSafetyStock());
+            inventory.setStatus("ACTIVE");
 
-        return mapToDTO(inventoryRepository.save(inventory));
+            InventoryResponseDTO result = mapToDTO(inventoryRepository.save(inventory));
+            auditLogService.log("Inventory.CREATE_SUCCESS | InventoryID: " + result.getInventoryId()
+                    + " | ProductID: " + dto.getProductId()
+                    + " | LocationID: " + dto.getLocationId()
+                    + " | QtyOnHand: " + dto.getQuantityOnHand()
+                    + " | SafetyStock: " + dto.getSafetyStock()
+                    + " | Status: ACTIVE");
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("Inventory.CREATE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Update inventory
     public InventoryResponseDTO updateInventory(Long id, InventoryRequestDTO dto) {
         Inventory inventory = inventoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Inventory not found with ID: " + id));
 
-        inventory.setQuantityOnHand(dto.getQuantityOnHand());
-        inventory.setSafetyStock(dto.getSafetyStock());
-        inventory.setLocationId(dto.getLocationId());
-        inventory.setStatus(dto.getStatus());
+        String before = "QtyOnHand: " + inventory.getQuantityOnHand()
+                + " | SafetyStock: " + inventory.getSafetyStock()
+                + " | LocationID: " + inventory.getLocationId()
+                + " | Status: " + inventory.getStatus();
 
-        return mapToDTO(inventoryRepository.save(inventory));
+        try {
+            inventory.setQuantityOnHand(dto.getQuantityOnHand());
+            inventory.setSafetyStock(dto.getSafetyStock());
+            inventory.setLocationId(dto.getLocationId());
+            inventory.setStatus(dto.getStatus());
+
+            InventoryResponseDTO result = mapToDTO(inventoryRepository.save(inventory));
+            auditLogService.log("Inventory.UPDATE_SUCCESS | InventoryID: " + id
+                    + " | Before: " + before
+                    + " | After: QtyOnHand: " + dto.getQuantityOnHand()
+                    + " | SafetyStock: " + dto.getSafetyStock()
+                    + " | LocationID: " + dto.getLocationId()
+                    + " | Status: " + dto.getStatus());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("Inventory.UPDATE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Soft delete
     public void deleteInventory(Long id) {
         Inventory inventory = inventoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Inventory not found with ID: " + id));
-        inventory.setStatus("INACTIVE");
-        inventoryRepository.save(inventory);
+        try {
+            inventory.setStatus("INACTIVE");
+            inventoryRepository.save(inventory);
+            auditLogService.log("Inventory.DELETE_SUCCESS | InventoryID: " + id
+                    + " | ProductID: " + inventory.getProduct().getProductId()
+                    + " | Status: INACTIVE");
+        } catch (Exception ex) {
+            auditLogService.logFailure("Inventory.DELETE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Get by ID
-    public InventoryResponseDTO getInventoryById(Long id) {
+    public InventoryResponseDTO replenishStock(Long id, Integer quantity) {
+        if (quantity <= 0) {
+            auditLogService.logFailure("Inventory.REPLENISH",
+                    "Invalid quantity: " + quantity + " | InventoryID: " + id);
+            throw new BadRequestException("Quantity must be greater than 0");
+        }
+
         Inventory inventory = inventoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Inventory not found with ID: " + id));
-        return mapToDTO(inventory);
+
+        int oldQty = inventory.getQuantityOnHand();
+        try {
+            inventory.setQuantityOnHand(oldQty + quantity);
+            InventoryResponseDTO result = mapToDTO(inventoryRepository.save(inventory));
+            auditLogService.log("Inventory.REPLENISH_SUCCESS | InventoryID: " + id
+                    + " | ProductID: " + inventory.getProduct().getProductId()
+                    + " | QtyBefore: " + oldQty
+                    + " | Added: " + quantity
+                    + " | QtyAfter: " + inventory.getQuantityOnHand());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("Inventory.REPLENISH", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Get all
+    public InventoryResponseDTO getInventoryById(Long id) {
+        return mapToDTO(inventoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Inventory not found with ID: " + id)));
+    }
+
     public List<InventoryResponseDTO> getAllInventory() {
-        return inventoryRepository.findAll()
-                .stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return inventoryRepository.findAll().stream()
+                .map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Get by product
     public List<InventoryResponseDTO> getInventoryByProduct(Long productId) {
         return inventoryRepository.findByProductProductId(productId)
-                .stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Get low stock items (quantity below safety stock)
     public List<InventoryResponseDTO> getLowStockInventory() {
-        return inventoryRepository.findAll()
-                .stream()
+        return inventoryRepository.findAll().stream()
                 .filter(i -> i.getQuantityOnHand() != null
                         && i.getSafetyStock() != null
                         && i.getQuantityOnHand() < i.getSafetyStock())
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Replenish stock
-    public InventoryResponseDTO replenishStock(Long id, Integer quantity) {
-        if (quantity <= 0) throw new BadRequestException("Quantity must be greater than 0");
-        Inventory inventory = inventoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Inventory not found with ID: " + id));
-        inventory.setQuantityOnHand(inventory.getQuantityOnHand() + quantity);
-        return mapToDTO(inventoryRepository.save(inventory));
-    }
 
-    // --- Mapper ---
     private InventoryResponseDTO mapToDTO(Inventory i) {
         InventoryResponseDTO dto = new InventoryResponseDTO();
         dto.setInventoryId(i.getInventoryId());
@@ -125,7 +172,6 @@ public class InventoryService {
             dto.setProductId(i.getProduct().getProductId());
             dto.setProductName(i.getProduct().getProductName());
         }
-        // Flag if quantity is below safety stock
         if (i.getQuantityOnHand() != null && i.getSafetyStock() != null) {
             dto.setLowStock(i.getQuantityOnHand() < i.getSafetyStock());
         }

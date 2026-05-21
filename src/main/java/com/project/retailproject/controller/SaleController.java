@@ -1,12 +1,11 @@
 package com.project.retailproject.controller;
 
-import com.project.retailproject.common.ApiResponse;
 import com.project.retailproject.dto.SaleRequestDTO;
 import com.project.retailproject.dto.SaleResponseDTO;
 import com.project.retailproject.service.SaleService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,61 +21,46 @@ public class SaleController {
     private SaleService saleService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<SaleResponseDTO>> insertSale(
-            @Valid @RequestBody SaleRequestDTO dto) {
-        SaleResponseDTO data = saleService.insertSale(dto);
-        return ResponseEntity.ok(ApiResponse.success("Sale created successfully", data));
-    }
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<SaleResponseDTO>>> getAllSales() {
-        List<SaleResponseDTO> data = saleService.getAllSales();
-        return ResponseEntity.ok(ApiResponse.success("Sales retrieved successfully", data));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SaleResponseDTO>> getSaleById(@PathVariable Long id) {
-        SaleResponseDTO data = saleService.getSaleById(id);
-        return ResponseEntity.ok(ApiResponse.success("Sale retrieved successfully", data));
+    public ResponseEntity<SaleResponseDTO> createSale(@RequestBody SaleRequestDTO dto) {
+        return ResponseEntity.ok(saleService.insertSale(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<SaleResponseDTO>> updateSale(
-            @PathVariable Long id,
-            @Valid @RequestBody SaleRequestDTO dto) {
-        SaleResponseDTO data = saleService.updateSale(id, dto);
-        return ResponseEntity.ok(ApiResponse.success("Sale updated successfully", data));
+    public ResponseEntity<SaleResponseDTO> updateSale(
+            @PathVariable Long id, @RequestBody SaleRequestDTO dto) {
+        return ResponseEntity.ok(saleService.updateSale(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteSale(@PathVariable Long id) {
+    public ResponseEntity<Void> cancelSale(@PathVariable Long id) {
         saleService.deleteSale(id);
-        return ResponseEntity.ok(ApiResponse.success("Sale cancelled successfully", null));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<SaleResponseDTO> getSale(@PathVariable Long id) {
+        return ResponseEntity.ok(saleService.getSaleById(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<SaleResponseDTO>> getAllSales() {
+        return ResponseEntity.ok(saleService.getAllSales());
     }
 
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<ApiResponse<List<SaleResponseDTO>>> getSalesByCustomer(
-            @PathVariable Long customerId) {
-        List<SaleResponseDTO> data = saleService.getSalesByCustomer(customerId);
-        return ResponseEntity.ok(ApiResponse.success("Sales retrieved successfully", data));
+    public ResponseEntity<List<SaleResponseDTO>> getByCustomer(@PathVariable Long customerId) {
+        return ResponseEntity.ok(saleService.getSalesByCustomer(customerId));
     }
 
     @GetMapping("/date-range")
-    public ResponseEntity<ApiResponse<List<SaleResponseDTO>>> getSalesByDateRange(
+    public ResponseEntity<List<SaleResponseDTO>> getByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
-        List<SaleResponseDTO> data = saleService.getSalesByDateRange(start, end);
-        return ResponseEntity.ok(ApiResponse.success("Sales retrieved successfully", data));
+        return ResponseEntity.ok(saleService.getSalesByDateRange(start, end));
     }
 
     @GetMapping("/paginated")
-    public ResponseEntity<ApiResponse<Page<SaleResponseDTO>>> getAllSalesPaginated(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "saleId") String sorting,
-            @RequestParam(defaultValue = "true") boolean asc) {
-        Sort sort = asc ? Sort.by(sorting).ascending() : Sort.by(sorting).descending();
-        Page<SaleResponseDTO> data = saleService.getAllSalesPaginated(PageRequest.of(page, size, sort));
-        return ResponseEntity.ok(ApiResponse.success("Sales retrieved successfully", data));
+    public ResponseEntity<Page<SaleResponseDTO>> getPaginated(Pageable pageable) {
+        return ResponseEntity.ok(saleService.getAllSalesPaginated(pageable));
     }
 }

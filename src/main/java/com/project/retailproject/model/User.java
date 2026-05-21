@@ -25,12 +25,12 @@ public class User {
 
     private String phoneNumber;
 
-    // Will be used when we add JWT auth
+
     private String password;
 
     public User() {}
 
-    // Getters & Setters
+
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
     public String getUserName() { return userName; }

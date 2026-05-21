@@ -26,84 +26,111 @@ public class CatalogService {
     @Autowired
     private ProductRepository productRepository;
 
-    // Add catalog
+    @Autowired
+    private AuditLogService auditLogService;
+
     public CatalogResponseDTO insertCatalog(CatalogRequestDTO dto) {
         Product product = productRepository.findById(dto.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Product not found with ID: " + dto.getProductId()));
 
-        // Validate dates
         if (dto.getExpiryDate().isBefore(dto.getEffectiveDate())) {
+            auditLogService.logFailure("Catalog.CREATE",
+                    "Expiry date before effective date | ProductID: " + dto.getProductId());
             throw new BadRequestException("Expiry date cannot be before effective date");
         }
 
-        Catalog catalog = new Catalog();
-        catalog.setProduct(product);
-        catalog.setEffectiveDate(dto.getEffectiveDate());
-        catalog.setExpiryDate(dto.getExpiryDate());
-        catalog.setStatus("ACTIVE");
+        try {
+            Catalog catalog = new Catalog();
+            catalog.setProduct(product);
+            catalog.setEffectiveDate(dto.getEffectiveDate());
+            catalog.setExpiryDate(dto.getExpiryDate());
+            catalog.setStatus("ACTIVE");
 
-        return mapToDTO(catalogRepository.save(catalog));
+            CatalogResponseDTO result = mapToDTO(catalogRepository.save(catalog));
+            auditLogService.log("Catalog.CREATE_SUCCESS | CatalogID: " + result.getCatalogId()
+                    + " | ProductID: " + dto.getProductId()
+                    + " | EffectiveDate: " + dto.getEffectiveDate()
+                    + " | ExpiryDate: " + dto.getExpiryDate()
+                    + " | Status: ACTIVE");
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("Catalog.CREATE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Update catalog
     public CatalogResponseDTO updateCatalog(Long id, CatalogRequestDTO dto) {
         Catalog catalog = catalogRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Catalog not found with ID: " + id));
 
         if (dto.getExpiryDate().isBefore(dto.getEffectiveDate())) {
+            auditLogService.logFailure("Catalog.UPDATE",
+                    "Expiry date before effective date | CatalogID: " + id);
             throw new BadRequestException("Expiry date cannot be before effective date");
         }
 
-        catalog.setEffectiveDate(dto.getEffectiveDate());
-        catalog.setExpiryDate(dto.getExpiryDate());
-        catalog.setStatus(dto.getStatus());
+        String before = "EffectiveDate: " + catalog.getEffectiveDate()
+                + " | ExpiryDate: " + catalog.getExpiryDate()
+                + " | Status: " + catalog.getStatus();
 
-        return mapToDTO(catalogRepository.save(catalog));
+        try {
+            catalog.setEffectiveDate(dto.getEffectiveDate());
+            catalog.setExpiryDate(dto.getExpiryDate());
+            catalog.setStatus(dto.getStatus());
+
+            CatalogResponseDTO result = mapToDTO(catalogRepository.save(catalog));
+            auditLogService.log("Catalog.UPDATE_SUCCESS | CatalogID: " + id
+                    + " | Before: " + before
+                    + " | After: EffectiveDate: " + dto.getEffectiveDate()
+                    + " | ExpiryDate: " + dto.getExpiryDate()
+                    + " | Status: " + dto.getStatus());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("Catalog.UPDATE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Soft delete
     public void deleteCatalog(Long id) {
         Catalog catalog = catalogRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Catalog not found with ID: " + id));
-        catalog.setStatus("INACTIVE");
-        catalogRepository.save(catalog);
+        try {
+            catalog.setStatus("INACTIVE");
+            catalogRepository.save(catalog);
+            auditLogService.log("Catalog.DELETE_SUCCESS | CatalogID: " + id
+                    + " | ProductID: " + catalog.getProduct().getProductId()
+                    + " | Status: INACTIVE");
+        } catch (Exception ex) {
+            auditLogService.logFailure("Catalog.DELETE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Get by ID
     public CatalogResponseDTO getCatalogById(Long id) {
-        Catalog catalog = catalogRepository.findById(id)
+        return mapToDTO(catalogRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Catalog not found with ID: " + id));
-        return mapToDTO(catalog);
+                        "Catalog not found with ID: " + id)));
     }
 
-    // Get all
     public List<CatalogResponseDTO> getAllCatalogs() {
-        return catalogRepository.findAll()
-                .stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return catalogRepository.findAll().stream()
+                .map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Get by product ID
     public List<CatalogResponseDTO> getCatalogsByProductId(Long productId) {
         return catalogRepository.findByProductProductId(productId)
-                .stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Pagination
     public Page<CatalogResponseDTO> getAllCatalogsWithPagination(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return catalogRepository.findAll(pageable)
-                .map(this::mapToDTO);
+        return catalogRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-    // --- Mapper ---
+
     private CatalogResponseDTO mapToDTO(Catalog c) {
         CatalogResponseDTO dto = new CatalogResponseDTO();
         dto.setCatalogId(c.getCatalogId());

@@ -1,10 +1,8 @@
 package com.project.retailproject.controller;
 
-import com.project.retailproject.common.ApiResponse;
 import com.project.retailproject.dto.CatalogRequestDTO;
 import com.project.retailproject.dto.CatalogResponseDTO;
 import com.project.retailproject.service.CatalogService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -20,50 +18,41 @@ public class CatalogController {
     private CatalogService catalogService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<CatalogResponseDTO>> addCatalog(
-            @Valid @RequestBody CatalogRequestDTO dto) {
-        CatalogResponseDTO data = catalogService.insertCatalog(dto);
-        return ResponseEntity.ok(ApiResponse.success("Catalog created successfully", data));
-    }
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<CatalogResponseDTO>>> getAllCatalogs() {
-        List<CatalogResponseDTO> data = catalogService.getAllCatalogs();
-        return ResponseEntity.ok(ApiResponse.success("Catalogs retrieved successfully", data));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CatalogResponseDTO>> getCatalogById(@PathVariable Long id) {
-        CatalogResponseDTO data = catalogService.getCatalogById(id);
-        return ResponseEntity.ok(ApiResponse.success("Catalog retrieved successfully", data));
+    public ResponseEntity<CatalogResponseDTO> createCatalog(@RequestBody CatalogRequestDTO dto) {
+        return ResponseEntity.ok(catalogService.insertCatalog(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<CatalogResponseDTO>> updateCatalog(
-            @PathVariable Long id,
-            @Valid @RequestBody CatalogRequestDTO dto) {
-        CatalogResponseDTO data = catalogService.updateCatalog(id, dto);
-        return ResponseEntity.ok(ApiResponse.success("Catalog updated successfully", data));
+    public ResponseEntity<CatalogResponseDTO> updateCatalog(
+            @PathVariable Long id, @RequestBody CatalogRequestDTO dto) {
+        return ResponseEntity.ok(catalogService.updateCatalog(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteCatalog(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCatalog(@PathVariable Long id) {
         catalogService.deleteCatalog(id);
-        return ResponseEntity.ok(ApiResponse.success("Catalog deactivated successfully", null));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<CatalogResponseDTO> getCatalog(@PathVariable Long id) {
+        return ResponseEntity.ok(catalogService.getCatalogById(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<CatalogResponseDTO>> getAllCatalogs() {
+        return ResponseEntity.ok(catalogService.getAllCatalogs());
     }
 
     @GetMapping("/product/{productId}")
-    public ResponseEntity<ApiResponse<List<CatalogResponseDTO>>> getCatalogsByProduct(
-            @PathVariable Long productId) {
-        List<CatalogResponseDTO> data = catalogService.getCatalogsByProductId(productId);
-        return ResponseEntity.ok(ApiResponse.success("Catalogs retrieved successfully", data));
+    public ResponseEntity<List<CatalogResponseDTO>> getByProduct(@PathVariable Long productId) {
+        return ResponseEntity.ok(catalogService.getCatalogsByProductId(productId));
     }
 
     @GetMapping("/paginated")
-    public ResponseEntity<ApiResponse<Page<CatalogResponseDTO>>> getPaginated(
+    public ResponseEntity<Page<CatalogResponseDTO>> getPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Page<CatalogResponseDTO> data = catalogService.getAllCatalogsWithPagination(page, size);
-        return ResponseEntity.ok(ApiResponse.success("Catalogs retrieved successfully", data));
+        return ResponseEntity.ok(catalogService.getAllCatalogsWithPagination(page, size));
     }
 }

@@ -40,7 +40,7 @@ public class NotificationService {
         return mapToDTO(notificationRepository.save(notification));
     }
 
-    // Mark as read
+
     public NotificationResponseDTO markAsRead(Long id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -87,7 +87,7 @@ public class NotificationService {
         return notificationRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-    // --- Mapper ---
+
     private NotificationResponseDTO mapToDTO(Notification n) {
         NotificationResponseDTO dto = new NotificationResponseDTO();
         dto.setNotificationId(n.getNotificationId());

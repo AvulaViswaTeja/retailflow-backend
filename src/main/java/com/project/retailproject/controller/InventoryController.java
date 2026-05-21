@@ -1,10 +1,8 @@
 package com.project.retailproject.controller;
 
-import com.project.retailproject.common.ApiResponse;
 import com.project.retailproject.dto.InventoryRequestDTO;
 import com.project.retailproject.dto.InventoryResponseDTO;
 import com.project.retailproject.service.InventoryService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,57 +17,45 @@ public class InventoryController {
     private InventoryService inventoryService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<InventoryResponseDTO>> addInventory(
-            @Valid @RequestBody InventoryRequestDTO dto) {
-        InventoryResponseDTO data = inventoryService.addInventory(dto);
-        return ResponseEntity.ok(ApiResponse.success("Inventory added successfully", data));
-    }
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<InventoryResponseDTO>>> getAllInventory() {
-        List<InventoryResponseDTO> data = inventoryService.getAllInventory();
-        return ResponseEntity.ok(ApiResponse.success("Inventory retrieved successfully", data));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<InventoryResponseDTO>> getInventoryById(
-            @PathVariable Long id) {
-        InventoryResponseDTO data = inventoryService.getInventoryById(id);
-        return ResponseEntity.ok(ApiResponse.success("Inventory retrieved successfully", data));
+    public ResponseEntity<InventoryResponseDTO> addInventory(@RequestBody InventoryRequestDTO dto) {
+        return ResponseEntity.ok(inventoryService.addInventory(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<InventoryResponseDTO>> updateInventory(
-            @PathVariable Long id,
-            @Valid @RequestBody InventoryRequestDTO dto) {
-        InventoryResponseDTO data = inventoryService.updateInventory(id, dto);
-        return ResponseEntity.ok(ApiResponse.success("Inventory updated successfully", data));
+    public ResponseEntity<InventoryResponseDTO> updateInventory(
+            @PathVariable Long id, @RequestBody InventoryRequestDTO dto) {
+        return ResponseEntity.ok(inventoryService.updateInventory(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteInventory(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteInventory(@PathVariable Long id) {
         inventoryService.deleteInventory(id);
-        return ResponseEntity.ok(ApiResponse.success("Inventory deactivated successfully", null));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<InventoryResponseDTO> getInventory(@PathVariable Long id) {
+        return ResponseEntity.ok(inventoryService.getInventoryById(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<InventoryResponseDTO>> getAllInventory() {
+        return ResponseEntity.ok(inventoryService.getAllInventory());
     }
 
     @GetMapping("/product/{productId}")
-    public ResponseEntity<ApiResponse<List<InventoryResponseDTO>>> getByProduct(
-            @PathVariable Long productId) {
-        List<InventoryResponseDTO> data = inventoryService.getInventoryByProduct(productId);
-        return ResponseEntity.ok(ApiResponse.success("Inventory retrieved successfully", data));
+    public ResponseEntity<List<InventoryResponseDTO>> getByProduct(@PathVariable Long productId) {
+        return ResponseEntity.ok(inventoryService.getInventoryByProduct(productId));
     }
 
     @GetMapping("/low-stock")
-    public ResponseEntity<ApiResponse<List<InventoryResponseDTO>>> getLowStock() {
-        List<InventoryResponseDTO> data = inventoryService.getLowStockInventory();
-        return ResponseEntity.ok(ApiResponse.success("Low stock items retrieved", data));
+    public ResponseEntity<List<InventoryResponseDTO>> getLowStock() {
+        return ResponseEntity.ok(inventoryService.getLowStockInventory());
     }
 
     @PatchMapping("/{id}/replenish")
-    public ResponseEntity<ApiResponse<InventoryResponseDTO>> replenishStock(
-            @PathVariable Long id,
-            @RequestParam Integer quantity) {
-        InventoryResponseDTO data = inventoryService.replenishStock(id, quantity);
-        return ResponseEntity.ok(ApiResponse.success("Stock replenished successfully", data));
+    public ResponseEntity<InventoryResponseDTO> replenish(
+            @PathVariable Long id, @RequestParam Integer quantity) {
+        return ResponseEntity.ok(inventoryService.replenishStock(id, quantity));
     }
 }

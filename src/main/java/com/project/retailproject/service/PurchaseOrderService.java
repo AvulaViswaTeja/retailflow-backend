@@ -24,84 +24,110 @@ public class PurchaseOrderService {
     @Autowired
     private ProductRepository productRepository;
 
-    // Create PO
+    @Autowired
+    private AuditLogService auditLogService;
+
     public PurchaseOrderResponseDTO insertPurchaseOrder(PurchaseOrderRequestDTO dto) {
         Product product = productRepository.findById(dto.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Product not found with ID: " + dto.getProductId()));
 
         if (dto.getExpectedDeliveryDate().isBefore(LocalDate.now())) {
+            auditLogService.logFailure("PurchaseOrder.CREATE",
+                    "Past delivery date: " + dto.getExpectedDeliveryDate()
+                            + " | ProductID: " + dto.getProductId());
             throw new BadRequestException("Expected delivery date cannot be in the past");
         }
 
-        PurchaseOrder po = new PurchaseOrder();
-        po.setSupplierId(dto.getSupplierId());
-        po.setProduct(product);
-        po.setOrderDate(LocalDate.now());
-        po.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
-        po.setStatus("PENDING");
+        try {
+            PurchaseOrder po = new PurchaseOrder();
+            po.setSupplierId(dto.getSupplierId());
+            po.setProduct(product);
+            po.setOrderDate(LocalDate.now());
+            po.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
+            po.setStatus("PENDING");
 
-        return mapToDTO(purchaseOrderRepository.save(po));
+            PurchaseOrderResponseDTO result = mapToDTO(purchaseOrderRepository.save(po));
+            auditLogService.log("PurchaseOrder.CREATE_SUCCESS | POID: " + result.getPurchaseOrderId()
+                    + " | SupplierID: " + dto.getSupplierId()
+                    + " | ProductID: " + dto.getProductId()
+                    + " | ExpectedDelivery: " + dto.getExpectedDeliveryDate()
+                    + " | Status: PENDING");
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("PurchaseOrder.CREATE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Update PO
     public PurchaseOrderResponseDTO updatePurchaseOrder(Long id, PurchaseOrderRequestDTO dto) {
         PurchaseOrder po = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Purchase Order not found with ID: " + id));
 
         if (po.getStatus().equals("DELIVERED")) {
+            auditLogService.logFailure("PurchaseOrder.UPDATE",
+                    "Attempt to update DELIVERED POID: " + id);
             throw new BadRequestException("Cannot update a delivered purchase order");
         }
 
-        po.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
-        po.setStatus(dto.getStatus());
+        String before = "Status: " + po.getStatus()
+                + " | ExpectedDelivery: " + po.getExpectedDeliveryDate();
 
-        return mapToDTO(purchaseOrderRepository.save(po));
+        try {
+            po.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
+            po.setStatus(dto.getStatus());
+
+            PurchaseOrderResponseDTO result = mapToDTO(purchaseOrderRepository.save(po));
+            auditLogService.log("PurchaseOrder.UPDATE_SUCCESS | POID: " + id
+                    + " | Before: " + before
+                    + " | After: Status: " + dto.getStatus()
+                    + " | ExpectedDelivery: " + dto.getExpectedDeliveryDate());
+            return result;
+        } catch (Exception ex) {
+            auditLogService.logFailure("PurchaseOrder.UPDATE", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Cancel PO (soft delete)
     public void deletePurchaseOrder(Long id) {
         PurchaseOrder po = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Purchase Order not found with ID: " + id));
-        po.setStatus("CANCELLED");
-        purchaseOrderRepository.save(po);
+        try {
+            po.setStatus("CANCELLED");
+            purchaseOrderRepository.save(po);
+            auditLogService.log("PurchaseOrder.CANCEL_SUCCESS | POID: " + id
+                    + " | SupplierID: " + po.getSupplierId()
+                    + " | ProductID: " + po.getProduct().getProductId()
+                    + " | Status: CANCELLED");
+        } catch (Exception ex) {
+            auditLogService.logFailure("PurchaseOrder.CANCEL", ex.getMessage());
+            throw ex;
+        }
     }
 
-    // Get by ID
     public PurchaseOrderResponseDTO getPurchaseOrderById(Long id) {
-        PurchaseOrder po = purchaseOrderRepository.findById(id)
+        return mapToDTO(purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Purchase Order not found with ID: " + id));
-        return mapToDTO(po);
+                        "Purchase Order not found with ID: " + id)));
     }
 
-    // Get all
     public List<PurchaseOrderResponseDTO> getAllPurchaseOrders() {
-        return purchaseOrderRepository.findAll()
-                .stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return purchaseOrderRepository.findAll().stream()
+                .map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Get by supplier
     public List<PurchaseOrderResponseDTO> getBySupplier(Long supplierId) {
         return purchaseOrderRepository.findBySupplierId(supplierId)
-                .stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Get by status
     public List<PurchaseOrderResponseDTO> getByStatus(String status) {
         return purchaseOrderRepository.findByStatus(status)
-                .stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // --- Mapper ---
     private PurchaseOrderResponseDTO mapToDTO(PurchaseOrder po) {
         PurchaseOrderResponseDTO dto = new PurchaseOrderResponseDTO();
         dto.setPurchaseOrderId(po.getPurchaseOrderId());
