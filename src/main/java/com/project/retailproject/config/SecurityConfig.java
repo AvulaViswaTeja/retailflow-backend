@@ -27,6 +27,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configure(http)) // ADD THIS LINE — tells Spring Security to use CorsConfig
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -52,7 +53,6 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/products/**").authenticated()
                         .requestMatchers("/api/catalogs/**").authenticated()
-                        .requestMatchers("/api/sales/**").authenticated()
                         .requestMatchers("/api/notifications/**").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/api/audit-logs/**")
@@ -60,7 +60,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/audit-logs/**")
                         .denyAll()
 
-                        // Everything else needs auth
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter,

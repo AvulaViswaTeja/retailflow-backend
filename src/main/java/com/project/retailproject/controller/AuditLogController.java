@@ -12,8 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// READ ONLY — no POST/PUT/DELETE endpoints
-// Audit logs are written internally by services, never via HTTP
+
 @RestController
 @RequestMapping("/api/audit-logs")
 public class AuditLogController {

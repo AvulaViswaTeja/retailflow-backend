@@ -29,7 +29,7 @@ public class Sale {
 
     public Sale() {}
 
-    // Getters & Setters
+
     public Long getSaleId() { return saleId; }
     public void setSaleId(Long saleId) { this.saleId = saleId; }
     public Product getProduct() { return product; }

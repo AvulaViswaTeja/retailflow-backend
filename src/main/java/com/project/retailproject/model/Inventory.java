@@ -30,7 +30,7 @@ public class Inventory {
 
     public Inventory() {}
 
-    // Getters & Setters
+
     public Long getInventoryId() { return inventoryId; }
     public void setInventoryId(Long inventoryId) { this.inventoryId = inventoryId; }
     public Product getProduct() { return product; }

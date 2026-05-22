@@ -29,7 +29,7 @@ public class Catalog {
 
     public Catalog() {}
 
-    // Getters & Setters
+
     public Long getCatalogId() { return catalogId; }
     public void setCatalogId(Long catalogId) { this.catalogId = catalogId; }
     public Product getProduct() { return product; }

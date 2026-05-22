@@ -40,14 +40,14 @@ public class SaleService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Product not found with ID: " + dto.getProductId()));
 
-        // Check 1 — product must be ACTIVE
+
         if (!product.getStatus().equalsIgnoreCase("ACTIVE")) {
             auditLogService.logFailure("Sale.CREATE",
                     "Attempt to sell INACTIVE ProductID: " + dto.getProductId());
             throw new BadRequestException("Cannot sell an inactive product");
         }
 
-        // Check 2 — product must have an ACTIVE catalog entry valid for today
+
         Catalog activeCatalog = catalogRepository
                 .findFirstByProductAndStatusAndEffectiveDateLessThanEqualAndExpiryDateGreaterThanEqual(
                         product, "ACTIVE", LocalDate.now(), LocalDate.now())
@@ -80,7 +80,7 @@ public class SaleService {
                     + " | Amount: " + amount
                     + " | Status: " + savedSale.getStatus());
 
-            // Auto-generate invoice for COMPLETED sales
+
             Invoice invoice = null;
             if (savedSale.getStatus().equalsIgnoreCase("COMPLETED")) {
                 invoice = new Invoice();
