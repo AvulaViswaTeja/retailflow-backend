@@ -36,8 +36,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        .requestMatchers("/api/compliance/**").permitAll()
-                        .requestMatchers("/api/kpireport/**").permitAll()
+                        .requestMatchers("/api/compliance-reports/**").permitAll()
+                        .requestMatchers("/api/kpi-reports/**").permitAll()
 
 
                         .requestMatchers("/api/sales/**").hasAnyRole("ADMIN", "STORE_ASSOCIATE", "STORE_MANAGER")

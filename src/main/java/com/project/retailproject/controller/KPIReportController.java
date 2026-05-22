@@ -20,18 +20,28 @@ public class KPIReportController {
     private KPIReportService kpiReportService;
 
     @PostMapping
-    public ResponseEntity<KPIReportResponseDTO> saveReport(@RequestBody KPIReportRequestDTO dto) {
+    public ResponseEntity<KPIReportResponseDTO> saveReport(
+            @RequestBody KPIReportRequestDTO dto) {
         return ResponseEntity.ok(kpiReportService.saveReport(dto));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<KPIReportResponseDTO> updateReport(
+            @PathVariable Long id,
+            @RequestBody KPIReportRequestDTO dto) {
+        return ResponseEntity.ok(kpiReportService.updateReport(id, dto));
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> archiveReport(@PathVariable Long id) {
+    public ResponseEntity<Void> archiveReport(
+            @PathVariable Long id) {
         kpiReportService.deleteReport(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<KPIReportResponseDTO> getById(@PathVariable Long id) {
+    public ResponseEntity<KPIReportResponseDTO> getById(
+            @PathVariable Long id) {
         return ResponseEntity.ok(kpiReportService.getById(id));
     }
 
@@ -41,7 +51,8 @@ public class KPIReportController {
     }
 
     @GetMapping("/scope/{scope}/latest")
-    public ResponseEntity<KPIReportResponseDTO> getLatestByScope(@PathVariable String scope) {
+    public ResponseEntity<KPIReportResponseDTO> getLatestByScope(
+            @PathVariable String scope) {
         return ResponseEntity.ok(kpiReportService.getLatestByScope(scope));
     }
 

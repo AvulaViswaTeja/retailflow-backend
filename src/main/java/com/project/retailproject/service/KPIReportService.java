@@ -95,4 +95,14 @@ public class KPIReportService {
         dto.setStatus(r.getStatus());
         return dto;
     }
+    public KPIReportResponseDTO updateReport(Long id, KPIReportRequestDTO dto) {
+        KPIReport report = kpiReportRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "KPI report not found with ID: " + id));
+
+        report.setScope(dto.getScope());
+        report.setMetrics(dto.getMetrics());
+
+        return mapToDTO(kpiReportRepository.save(report));
+    }
 }
