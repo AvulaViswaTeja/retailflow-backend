@@ -21,7 +21,7 @@ public class InvoiceController {
     private InvoiceService invoiceService;
 
     @PostMapping
-    public ResponseEntity<InvoiceResponseDTO> createInvoice(@RequestBody InvoiceRequestDTO dto) {
+    public ResponseEntity<InvoiceResponseDTO> insertInvoice(@RequestBody InvoiceRequestDTO dto) {
         return ResponseEntity.ok(invoiceService.insertInvoice(dto));
     }
 
@@ -32,7 +32,7 @@ public class InvoiceController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelInvoice(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
         invoiceService.deleteInvoice(id);
         return ResponseEntity.noContent().build();
     }
@@ -48,19 +48,19 @@ public class InvoiceController {
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<InvoiceResponseDTO>> getByStatus(@PathVariable String status) {
+    public ResponseEntity<List<InvoiceResponseDTO>> getInvoiceByStatus(@PathVariable String status) {
         return ResponseEntity.ok(invoiceService.getByStatus(status));
     }
 
     @GetMapping("/date-range")
-    public ResponseEntity<List<InvoiceResponseDTO>> getByDateRange(
+    public ResponseEntity<List<InvoiceResponseDTO>> getInvoiceByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
         return ResponseEntity.ok(invoiceService.getByDateRange(start, end));
     }
 
     @GetMapping("/paginated")
-    public ResponseEntity<Page<InvoiceResponseDTO>> getPaginated(Pageable pageable) {
+    public ResponseEntity<Page<InvoiceResponseDTO>> getInvoicePaginated(Pageable pageable) {
         return ResponseEntity.ok(invoiceService.getAllInvoicesPaginated(pageable));
     }
 }
