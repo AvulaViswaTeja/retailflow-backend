@@ -115,17 +115,33 @@ public class SaleService {
         }
 
         String before = "Qty: " + sale.getQuantity()
-                + " | Status: " + sale.getStatus();
+                + " | Status: " + sale.getStatus()
+                + " | Amount: " + sale.getAmount();
 
         try {
+            // Update quantity and status
             sale.setQuantity(dto.getQuantity());
             sale.setStatus(dto.getStatus());
-            SaleResponseDTO result = mapToDTO(saleRepository.save(sale), null);
+
+           // calculating the newAmount (in case quantity get updated)
+            double newAmount = sale.getProduct().getPrice() * dto.getQuantity();
+            sale.setAmount(newAmount);
+
+            Sale savedSale = saleRepository.save(sale);
+
+
+            Invoice invoice = invoiceRepository
+                    .findBySale_SaleId(id)
+                    .orElse(null);
+
             auditLogService.log("Sale.UPDATE_SUCCESS | SaleID: " + id
                     + " | Before: " + before
                     + " | After: Qty: " + dto.getQuantity()
-                    + " | Status: " + dto.getStatus());
-            return result;
+                    + " | Status: " + dto.getStatus()
+                    + " | Amount: " + newAmount);
+
+            return mapToDTO(savedSale, invoice);
+
         } catch (Exception ex) {
             auditLogService.logFailure("Sale.UPDATE", ex.getMessage());
             throw ex;
@@ -139,6 +155,18 @@ public class SaleService {
         try {
             sale.setStatus("CANCELLED");
             saleRepository.save(sale);
+
+            invoiceRepository.findBySale_SaleId(id).ifPresent(invoice -> {
+                if (!invoice.getStatus().equals("PAID")) {
+                    invoice.setStatus("CANCELLED");
+                    invoiceRepository.save(invoice);
+                    auditLogService.log("Invoice.AUTO_CANCELLED | InvoiceID: "
+                            + invoice.getInvoiceId()
+                            + " | SaleID: " + id
+                            + " | Reason: Sale cancelled");
+                }
+            });
+
             auditLogService.log("Sale.CANCEL_SUCCESS | SaleID: " + id
                     + " | CustomerID: " + sale.getCustomerId()
                     + " | Amount: " + sale.getAmount()
@@ -150,28 +178,58 @@ public class SaleService {
     }
 
     public SaleResponseDTO getSaleById(Long id) {
-        return mapToDTO(saleRepository.findById(id)
+        Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Sale not found with ID: " + id)), null);
+                        "Sale not found with ID: " + id));
+        Invoice invoice = invoiceRepository
+                .findBySale_SaleId(id)
+                .orElse(null);
+        return mapToDTO(sale, invoice);
     }
 
     public List<SaleResponseDTO> getAllSales() {
         return saleRepository.findAll().stream()
-                .map(s -> mapToDTO(s, null)).collect(Collectors.toList());
+                .map(s -> {
+                    Invoice invoice = invoiceRepository
+                            .findBySale_SaleId(s.getSaleId())
+                            .orElse(null);
+                    return mapToDTO(s, invoice);
+                })
+                .collect(Collectors.toList());
     }
 
     public List<SaleResponseDTO> getSalesByCustomer(Long customerId) {
         return saleRepository.findByCustomerId(customerId)
-                .stream().map(s -> mapToDTO(s, null)).collect(Collectors.toList());
+                .stream()
+                .map(s -> {
+                    Invoice invoice = invoiceRepository
+                            .findBySale_SaleId(s.getSaleId())
+                            .orElse(null);
+                    return mapToDTO(s, invoice);
+                })
+                .collect(Collectors.toList());
     }
 
     public List<SaleResponseDTO> getSalesByDateRange(LocalDate start, LocalDate end) {
         return saleRepository.findByDateBetween(start, end)
-                .stream().map(s -> mapToDTO(s, null)).collect(Collectors.toList());
+                .stream()
+                .map(s -> {
+                    Invoice invoice = invoiceRepository
+                            .findBySale_SaleId(s.getSaleId())
+                            .orElse(null);
+                    return mapToDTO(s, invoice);
+                })
+                .collect(Collectors.toList());
     }
 
     public Page<SaleResponseDTO> getAllSalesPaginated(Pageable pageable) {
-        return saleRepository.findAll(pageable).map(s -> mapToDTO(s, null));
+        return saleRepository.findAll(pageable)
+                .map(s -> {
+                    Invoice invoice = invoiceRepository
+                            .findBySale_SaleId(s.getSaleId())
+                            .orElse(null);
+                    return mapToDTO(s, invoice);
+                });
     }
 
 

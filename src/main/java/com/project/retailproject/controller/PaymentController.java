@@ -29,9 +29,9 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.updatePayment(id, dto));
     }
 
-    @DeleteMapping("/{id}")
+    @PatchMapping("/{id}/refund")
     public ResponseEntity<Void> refundPayment(@PathVariable Long id) {
-        paymentService.deletePayment(id);
+        paymentService.refundPayment(id);
         return ResponseEntity.noContent().build();
     }
 

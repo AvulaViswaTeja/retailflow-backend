@@ -105,17 +105,44 @@ public class PaymentService {
         }
     }
 
-    public void deletePayment(Long id) {
+    @Transactional
+    public void refundPayment(Long id) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Payment not found with ID: " + id));
+
+        if (payment.getStatus().equals("REFUNDED")) {
+            throw new BadRequestException("Payment is already refunded");
+        }
+
         try {
             payment.setStatus("REFUNDED");
             paymentRepository.save(payment);
+
+
+            Invoice invoice = payment.getInvoice();
+            Double totalPaid = paymentRepository
+                    .sumSuccessfulPaymentsByInvoiceId(invoice.getInvoiceId());
+            if (totalPaid == null) totalPaid = 0.0;
+
+            String newInvoiceStatus;
+            if (totalPaid <= 0) {
+                newInvoiceStatus = "PENDING";
+            } else if (totalPaid < invoice.getAmount()) {
+                newInvoiceStatus = "PARTIALLY_PAID";
+            } else {
+                newInvoiceStatus = "PAID";
+            }
+
+            invoice.setStatus(newInvoiceStatus);
+            invoiceRepository.save(invoice);
+
             auditLogService.log("Payment.REFUND_SUCCESS | PaymentID: " + id
-                    + " | InvoiceID: " + payment.getInvoice().getInvoiceId()
+                    + " | InvoiceID: " + invoice.getInvoiceId()
                     + " | Amount: " + payment.getAmount()
-                    + " | Status: REFUNDED");
+                    + " | Status: REFUNDED"
+                    + " | InvoiceStatus: " + newInvoiceStatus);
+
         } catch (Exception ex) {
             auditLogService.logFailure("Payment.REFUND", ex.getMessage());
             throw ex;
