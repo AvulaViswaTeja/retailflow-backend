@@ -2,6 +2,7 @@ package com.project.retailproject.service;
 
 import com.project.retailproject.db.CatalogRepository;
 import com.project.retailproject.db.ProductRepository;
+import com.project.retailproject.dto.CatalogResponseDTO;
 import com.project.retailproject.dto.ProductRequestDTO;
 import com.project.retailproject.dto.ProductResponseDTO;
 import com.project.retailproject.exception.BadRequestException;
@@ -9,6 +10,9 @@ import com.project.retailproject.exception.ResourceNotFoundException;
 import com.project.retailproject.model.Catalog;
 import com.project.retailproject.model.Product;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -116,6 +120,11 @@ public class ProductService {
     public List<ProductResponseDTO> getProductsByCategory(String category) {
         return productRepository.findByCategory(category).stream()
                 .map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    public Page<ProductResponseDTO> getAllProductsWithPagination(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return productRepository.findAll(pageable).map(this::mapToDTO);
     }
 
 
