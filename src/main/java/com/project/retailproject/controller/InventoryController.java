@@ -4,6 +4,7 @@ import com.project.retailproject.dto.InventoryRequestDTO;
 import com.project.retailproject.dto.InventoryResponseDTO;
 import com.project.retailproject.service.InventoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,5 +58,11 @@ public class InventoryController {
     public ResponseEntity<InventoryResponseDTO> replenish(
             @PathVariable Long id, @RequestParam Integer quantity) {
         return ResponseEntity.ok(inventoryService.replenishStock(id, quantity));
+    }
+    @GetMapping("/paginated")
+    public ResponseEntity<Page<InventoryResponseDTO>> getPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(inventoryService.getAllInventoryWithPagination(page, size));
     }
 }

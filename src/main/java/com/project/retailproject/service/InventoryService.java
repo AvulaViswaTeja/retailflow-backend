@@ -4,11 +4,15 @@ import com.project.retailproject.db.InventoryRepository;
 import com.project.retailproject.db.ProductRepository;
 import com.project.retailproject.dto.InventoryRequestDTO;
 import com.project.retailproject.dto.InventoryResponseDTO;
+import com.project.retailproject.dto.PurchaseOrderResponseDTO;
 import com.project.retailproject.exception.BadRequestException;
 import com.project.retailproject.exception.ResourceNotFoundException;
 import com.project.retailproject.model.Inventory;
 import com.project.retailproject.model.Product;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -159,7 +163,10 @@ public class InventoryService {
                         && i.getQuantityOnHand() < i.getSafetyStock())
                 .map(this::mapToDTO).collect(Collectors.toList());
     }
-
+    public Page<InventoryResponseDTO> getAllInventoryWithPagination(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return inventoryRepository.findAll(pageable).map(this::mapToDTO);
+    }
 
     private InventoryResponseDTO mapToDTO(Inventory i) {
         InventoryResponseDTO dto = new InventoryResponseDTO();

@@ -2,6 +2,7 @@ package com.project.retailproject.service;
 
 import com.project.retailproject.db.ProductRepository;
 import com.project.retailproject.db.PurchaseOrderRepository;
+import com.project.retailproject.dto.ProductResponseDTO;
 import com.project.retailproject.dto.PurchaseOrderRequestDTO;
 import com.project.retailproject.dto.PurchaseOrderResponseDTO;
 import com.project.retailproject.exception.BadRequestException;
@@ -9,6 +10,9 @@ import com.project.retailproject.exception.ResourceNotFoundException;
 import com.project.retailproject.model.Product;
 import com.project.retailproject.model.PurchaseOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -71,6 +75,13 @@ public class PurchaseOrderService {
             throw new BadRequestException("Cannot update a delivered purchase order");
         }
 
+        // Validate expected delivery date is not before order date
+        if (dto.getExpectedDeliveryDate().isBefore(po.getOrderDate())) {
+            auditLogService.logFailure("PurchaseOrder.UPDATE",
+                    "Invalid expected delivery date for POID: " + id);
+            throw new BadRequestException("Expected delivery date cannot be before order date: " + po.getOrderDate());
+        }
+
         String before = "Status: " + po.getStatus()
                 + " | ExpectedDelivery: " + po.getExpectedDeliveryDate();
 
@@ -126,6 +137,10 @@ public class PurchaseOrderService {
     public List<PurchaseOrderResponseDTO> getByStatus(String status) {
         return purchaseOrderRepository.findByStatus(status)
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+    public Page<PurchaseOrderResponseDTO> getAllPurchaseOrdersWithPagination(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return purchaseOrderRepository.findAll(pageable).map(this::mapToDTO);
     }
 
     private PurchaseOrderResponseDTO mapToDTO(PurchaseOrder po) {
