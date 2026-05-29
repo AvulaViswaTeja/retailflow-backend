@@ -10,7 +10,7 @@ public class AuditLogResponseDTO {
     private Long userId;
     private String userName;
 
-    // Getters & Setters
+
     public Long getAuditId() { return auditId; }
     public void setAuditId(Long auditId) { this.auditId = auditId; }
     public String getAction() { return action; }

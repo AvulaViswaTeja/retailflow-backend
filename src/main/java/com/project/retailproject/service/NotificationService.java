@@ -41,13 +41,7 @@ public class NotificationService {
     }
 
 
-    public NotificationResponseDTO markAsRead(Long id) {
-        Notification notification = notificationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Notification not found with ID: " + id));
-        notification.setStatus("READ");
-        return mapToDTO(notificationRepository.save(notification));
-    }
+
 
     public void deleteNotification(Long id) {
         if (!notificationRepository.existsById(id)) {

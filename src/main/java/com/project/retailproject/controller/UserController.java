@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +19,16 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    // NEW — GET /api/users/me
+    // Returns currently logged-in user's details
+    // Accessible by ALL roles — used by frontend to get userId after login
+    @GetMapping("/me")
+    public ResponseEntity<UserResponseDTO> getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName(); // email extracted from JWT token
+        return ResponseEntity.ok(userService.getUserByEmail(email));
+    }
 
     @PostMapping
     public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO dto) {

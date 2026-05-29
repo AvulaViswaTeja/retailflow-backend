@@ -21,7 +21,7 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    // Generate token
+
     public String generateToken(String email, String role) {
         return Jwts.builder()
                 .setSubject(email)
@@ -32,17 +32,17 @@ public class JwtUtil {
                 .compact();
     }
 
-    // Extract email from token
+
     public String extractEmail(String token) {
         return getClaims(token).getSubject();
     }
 
-    // Extract role from token
+
     public String extractRole(String token) {
         return getClaims(token).get("role", String.class);
     }
 
-    // Validate token
+
     public boolean validateToken(String token) {
         try {
             getClaims(token);

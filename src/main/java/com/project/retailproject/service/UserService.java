@@ -36,8 +36,6 @@ public class UserService {
         try {
             User user = mapToEntity(dto);
             UserResponseDTO result = mapToDTO(userRepository.save(user));
-
-
             auditLogService.log("User.CREATE_SUCCESS | UserID: " + result.getUserId()
                     + " | Name: " + result.getUserName()
                     + " | Role: " + result.getRole()
@@ -63,7 +61,6 @@ public class UserService {
             user.setRole(dto.getRole());
             user.setPhoneNumber(dto.getPhoneNumber());
 
-            // Re-hash password only if a new one is provided
             if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
                 user.setPassword(passwordEncoder.encode(dto.getPassword()));
             }
@@ -103,6 +100,15 @@ public class UserService {
                         "User not found with ID: " + id)));
     }
 
+    // NEW — used by /api/users/me endpoint
+    // Reads current user by email extracted from JWT token
+    public UserResponseDTO getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with email: " + email));
+        return mapToDTO(user);
+    }
+
     public List<UserResponseDTO> getUsers() {
         return userRepository.findAll().stream()
                 .map(this::mapToDTO).collect(Collectors.toList());
@@ -117,14 +123,14 @@ public class UserService {
         return userRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-
+    // --- Mappers ---
     private User mapToEntity(UserRequestDTO dto) {
         User user = new User();
         user.setUserName(dto.getUserName());
         user.setRole(dto.getRole());
         user.setEmail(dto.getEmail());
         user.setPhoneNumber(dto.getPhoneNumber());
-        user.setPassword(passwordEncoder.encode(dto.getPassword())); // hashed
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         return user;
     }
 

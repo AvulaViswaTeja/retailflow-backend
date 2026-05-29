@@ -24,10 +24,7 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.insertNotification(dto));
     }
 
-    @PatchMapping("/{id}/read")
-    public ResponseEntity<NotificationResponseDTO> markAsRead(@PathVariable Long id) {
-        return ResponseEntity.ok(notificationService.markAsRead(id));
-    }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotification(@PathVariable Long id) {
