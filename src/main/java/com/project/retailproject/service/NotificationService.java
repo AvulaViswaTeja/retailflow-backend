@@ -50,6 +50,14 @@ public class NotificationService {
         notificationRepository.deleteById(id);
     }
 
+    public NotificationResponseDTO markAsRead(Long id) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Notification not found with ID: " + id));
+        notification.setStatus("READ");
+        return mapToDTO(notificationRepository.save(notification));
+    }
+
     public NotificationResponseDTO getNotification(Long id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(

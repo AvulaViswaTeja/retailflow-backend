@@ -15,7 +15,7 @@ public class ProductRequestDTO {
 
     private String status;
 
-    // Getters & Setters
+
     public String getProductName() { return productName; }
     public void setProductName(String productName) { this.productName = productName; }
     public String getCategory() { return category; }
