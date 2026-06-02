@@ -1,9 +1,11 @@
 package com.project.retailproject.controller;
 
+import com.project.retailproject.dto.CatalogResponseDTO;
 import com.project.retailproject.dto.ProductRequestDTO;
 import com.project.retailproject.dto.ProductResponseDTO;
 import com.project.retailproject.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,5 +48,12 @@ public class ProductController {
     @GetMapping("/category/{category}")
     public ResponseEntity<List<ProductResponseDTO>> getByCategory(@PathVariable String category) {
         return ResponseEntity.ok(productService.getProductsByCategory(category));
+    }
+
+    @GetMapping("/paginated")
+    public ResponseEntity<Page<ProductResponseDTO>> getPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(productService.getAllProductsWithPagination(page, size));
     }
 }
