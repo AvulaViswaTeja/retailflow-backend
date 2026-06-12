@@ -24,64 +24,62 @@ public class ComplianceReportService {
     @Autowired
     private AuditLogService auditLogService;
 
-    // Thresholds
     private static final double SHRINKAGE_THRESHOLD = 5.0;
     private static final double MIN_STOCK_TURNOVER  = 2.0;
     private static final double MIN_SALES_GROWTH    = 0.0;
 
-
-    // ── INSERT — now evaluates thresholds and gives verdict ───────────────────
     public ComplianceReportResponseDTO insertComplianceReport(
             ComplianceReportRequestDTO dto) {
         try {
 
-            // Step 1 — Parse KPI values from metrics string
-            // metrics = "Stock Turnover: 4.75 | Sales Growth: 12.0% | Shrinkage: 1.8%"
             double stockTurnover = 0.0;
             double salesGrowth   = 0.0;
             double shrinkageRate = 0.0;
 
             try {
                 String metrics = dto.getMetrics();
+                System.out.println("=== METRICS RECEIVED: [" + metrics + "]");
                 if (metrics != null && !metrics.isEmpty()) {
                     String[] parts = metrics.split("\\|");
+                    System.out.println("=== PARTS COUNT: " + parts.length);
                     for (String part : parts) {
                         part = part.trim();
+                        System.out.println("=== PART: [" + part + "]");
                         if (part.startsWith("Stock Turnover:")) {
                             stockTurnover = Double.parseDouble(
                                     part.replace("Stock Turnover:", "").trim());
+                            System.out.println("=== PARSED TURNOVER: " + stockTurnover);
                         } else if (part.startsWith("Sales Growth:")) {
                             salesGrowth = Double.parseDouble(
                                     part.replace("Sales Growth:", "")
                                             .replace("%", "").trim());
+                            System.out.println("=== PARSED GROWTH: " + salesGrowth);
                         } else if (part.startsWith("Shrinkage:")) {
                             shrinkageRate = Double.parseDouble(
                                     part.replace("Shrinkage:", "")
                                             .replace("%", "").trim());
+                            System.out.println("=== PARSED SHRINKAGE: " + shrinkageRate);
                         }
                     }
                 }
             } catch (Exception e) {
-                // if parsing fails use 0 values
+                System.err.println("=== PARSE ERROR: " + e.getMessage());
+                e.printStackTrace();
             }
 
-            // Step 2 — Evaluate thresholds
             boolean shrinkageOk = shrinkageRate <= SHRINKAGE_THRESHOLD;
             boolean growthOk    = salesGrowth   >= MIN_SALES_GROWTH;
             boolean turnoverOk  = stockTurnover >= MIN_STOCK_TURNOVER;
 
-            // Step 3 — Count failures
             int failures = 0;
             if (!shrinkageOk) failures++;
             if (!growthOk)    failures++;
             if (!turnoverOk)  failures++;
 
-            // Step 4 — Determine verdict
             String complianceStatus = failures == 0 ? "PASS"
                     : failures >= 2 ? "FAIL"
                     : "WARNING";
 
-            // Step 5 — Build remarks
             StringBuilder remarks = new StringBuilder();
             if (failures == 0) {
                 remarks.append("All KPI thresholds met.");
@@ -96,7 +94,6 @@ public class ComplianceReportService {
                         stockTurnover, MIN_STOCK_TURNOVER));
             }
 
-            // Step 6 — Build and save entity
             ComplianceReport report = new ComplianceReport();
             report.setScope(dto.getScope());
             report.setMetrics(dto.getMetrics());
@@ -124,8 +121,6 @@ public class ComplianceReportService {
         }
     }
 
-
-    // ── UPDATE — unchanged from original ─────────────────────────────────────
     public ComplianceReportResponseDTO updateComplianceReport(
             Long id, ComplianceReportRequestDTO dto) {
         ComplianceReport report = complianceReportRepository.findById(id)
@@ -154,8 +149,6 @@ public class ComplianceReportService {
         }
     }
 
-
-    // ── DELETE — unchanged from original ─────────────────────────────────────
     public void deleteComplianceReport(Long id) {
         ComplianceReport report = complianceReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -172,32 +165,24 @@ public class ComplianceReportService {
         }
     }
 
-
-    // ── GET BY ID — unchanged ─────────────────────────────────────────────────
     public ComplianceReportResponseDTO getComplianceReport(Long id) {
         return mapToDTO(complianceReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Compliance report not found with ID: " + id)));
     }
 
-
-    // ── GET ALL — unchanged ───────────────────────────────────────────────────
     public List<ComplianceReportResponseDTO> getAllComplianceReports() {
         return complianceReportRepository.findAll()
                 .stream().map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
-
-    // ── GET BY SCOPE — unchanged ──────────────────────────────────────────────
     public List<ComplianceReportResponseDTO> getByScope(String scope) {
         return complianceReportRepository.findByScope(scope)
                 .stream().map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
-
-    // ── GET LATEST BY SCOPE — unchanged ──────────────────────────────────────
     public ComplianceReportResponseDTO getLatestByScope(String scope) {
         ComplianceReport report = complianceReportRepository
                 .findFirstByScopeOrderByGeneratedDateDesc(scope);
@@ -206,8 +191,6 @@ public class ComplianceReportService {
         return mapToDTO(report);
     }
 
-
-    // ── GET BY DATE RANGE — unchanged ─────────────────────────────────────────
     public List<ComplianceReportResponseDTO> getByDateRange(
             LocalDate start, LocalDate end) {
         return complianceReportRepository.findByGeneratedDateBetween(start, end)
@@ -215,16 +198,12 @@ public class ComplianceReportService {
                 .collect(Collectors.toList());
     }
 
-
-    // ── PAGINATION — unchanged ────────────────────────────────────────────────
     public Page<ComplianceReportResponseDTO> getAllPagesWithPagination(
             int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return complianceReportRepository.findAll(pageable).map(this::mapToDTO);
     }
 
-
-    // ── MAP ENTITY TO DTO — updated with new fields ───────────────────────────
     private ComplianceReportResponseDTO mapToDTO(ComplianceReport r) {
         ComplianceReportResponseDTO dto = new ComplianceReportResponseDTO();
         dto.setReportId(r.getReportId());
