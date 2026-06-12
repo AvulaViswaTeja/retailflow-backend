@@ -44,13 +44,5 @@ public class Payment {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        Payment payment = (Payment) o;
-        return Objects.equals(paymentId, payment.paymentId);
-    }
 
-    @Override
-    public int hashCode() { return Objects.hash(paymentId); }
 }

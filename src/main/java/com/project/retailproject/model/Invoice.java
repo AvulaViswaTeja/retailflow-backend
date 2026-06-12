@@ -38,13 +38,5 @@ public class Invoice {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        Invoice invoice = (Invoice) o;
-        return Objects.equals(invoiceId, invoice.invoiceId);
-    }
 
-    @Override
-    public int hashCode() { return Objects.hash(invoiceId); }
 }
