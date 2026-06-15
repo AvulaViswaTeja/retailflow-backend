@@ -12,14 +12,14 @@ import java.util.List;
 @Repository
 public interface SaleRepository extends JpaRepository<Sale, Long> {
 
-    // existing methods — unchanged
+
     List<Sale> findByCustomerId(Long customerId);
     List<Sale> findByStatus(String status);
     List<Sale> findByDateBetween(LocalDate startDate, LocalDate endDate);
     List<Sale> findByProduct_ProductId(Long productId);
     long countByCustomerId(Long customerId);
 
-    // NEW — added for KPI computation
+
     @Query("SELECT COALESCE(SUM(s.amount), 0) FROM Sale s " +
             "WHERE s.date BETWEEN :start AND :end " +
             "AND s.status = 'COMPLETED'")

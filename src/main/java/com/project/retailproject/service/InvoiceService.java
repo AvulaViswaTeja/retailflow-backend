@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -151,5 +152,27 @@ public class InvoiceService {
             dto.setCustomerId(i.getSale().getCustomerId());
         }
         return dto;
+    }
+
+    public InvoiceResponseDTO getInvoiceBySaleId(Long saleId) {
+        Optional<Invoice> invoice  = invoiceRepository.findBySale_SaleId(saleId);
+        if(invoice.isPresent()) {
+            Invoice inv = invoice.get();
+
+            InvoiceResponseDTO dto = new InvoiceResponseDTO();
+            dto.setInvoiceId(inv.getInvoiceId());
+            dto.setAmount(inv.getAmount());
+            dto.setDate(inv.getDate());
+            dto.setStatus(inv.getStatus());
+            if (inv.getSale() != null) {
+                dto.setSaleId(inv.getSale().getSaleId());
+                dto.setCustomerId(inv.getSale().getCustomerId());
+            }
+
+            return dto;
+        }
+
+        return null;
+
     }
 }

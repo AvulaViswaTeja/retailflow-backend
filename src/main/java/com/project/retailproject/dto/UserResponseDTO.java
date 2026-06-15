@@ -7,11 +7,13 @@ public class UserResponseDTO {
     private String role;
     private String email;
     private String phoneNumber;
-    // No password field — never expose it!
 
-    // Getters & Setters
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public Long getUserId() {
+        return userId;
+    }
+    public void setUserId(Long userId) {
+        this.userId = userId; }
+
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
     public String getRole() { return role; }

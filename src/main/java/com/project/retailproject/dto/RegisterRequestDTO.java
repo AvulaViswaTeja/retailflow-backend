@@ -16,12 +16,11 @@ public class RegisterRequestDTO {
     private String password;
 
     @NotBlank(message = "Role is required")
-    private String role; // ADMIN, STORE_ASSOCIATE, INVENTORY_MANAGER,
-    // FINANCE_OFFICER, COMPLIANCE_OFFICER, STORE_MANAGER
+    private String role;
 
     private String phoneNumber;
 
-    // Getters & Setters
+
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
     public String getEmail() { return email; }

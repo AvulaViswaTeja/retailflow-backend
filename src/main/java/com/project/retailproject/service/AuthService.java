@@ -29,6 +29,17 @@ public class AuthService {
 
 
     public UserResponseDTO register(RegisterRequestDTO dto) {
+
+        if ("ADMIN".equalsIgnoreCase(dto.getRole())) {
+            long adminCount = userRepository.countByRole("ADMIN");
+            if (adminCount >= 1) {
+                auditLogService.log("AUTH.REGISTER_FAILED | Error: Admin already exists, blocked admin registration for "
+                        + dto.getEmail());
+                throw new BadRequestException("An admin already exists. Cannot register another admin.");
+            }
+
+        }
+
         if (userRepository.existsByEmail(dto.getEmail())) {
             auditLogService.log(
                     "AUTH.REGISTER_FAILED | Error: Email already registered: " + dto.getEmail());
@@ -92,6 +103,7 @@ public class AuthService {
         response.setEmail(user.getEmail());
         response.setRole(user.getRole());
         response.setUserName(user.getUserName());
+        response.setUserId(user.getUserId());
         return response;
     }
 }

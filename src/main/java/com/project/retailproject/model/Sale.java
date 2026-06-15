@@ -45,13 +45,7 @@ public class Sale {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        Sale sale = (Sale) o;
-        return Objects.equals(saleId, sale.saleId);
-    }
 
-    @Override
-    public int hashCode() { return Objects.hash(saleId); }
+
+
 }
