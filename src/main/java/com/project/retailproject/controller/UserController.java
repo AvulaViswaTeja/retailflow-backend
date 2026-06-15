@@ -20,13 +20,11 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    // NEW — GET /api/users/me
-    // Returns currently logged-in user's details
-    // Accessible by ALL roles — used by frontend to get userId after login
+
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName(); // email extracted from JWT token
+        String email = auth.getName();
         return ResponseEntity.ok(userService.getUserByEmail(email));
     }
 
