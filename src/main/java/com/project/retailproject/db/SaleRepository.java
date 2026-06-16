@@ -12,18 +12,24 @@ import java.util.List;
 @Repository
 public interface SaleRepository extends JpaRepository<Sale, Long> {
 
-
     List<Sale> findByCustomerId(Long customerId);
     List<Sale> findByStatus(String status);
     List<Sale> findByDateBetween(LocalDate startDate, LocalDate endDate);
     List<Sale> findByProduct_ProductId(Long productId);
     long countByCustomerId(Long customerId);
 
-
     @Query("SELECT COALESCE(SUM(s.amount), 0) FROM Sale s " +
             "WHERE s.date BETWEEN :start AND :end " +
             "AND s.status = 'COMPLETED'")
     Double getSalesInPeriod(
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
+
+    @Query("SELECT COALESCE(SUM(s.quantity), 0) FROM Sale s " +
+            "WHERE s.date BETWEEN :start AND :end " +
+            "AND s.status = 'COMPLETED'")
+    Double getTotalUnitsSoldInPeriod(
             @Param("start") LocalDate start,
             @Param("end") LocalDate end
     );

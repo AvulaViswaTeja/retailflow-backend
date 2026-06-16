@@ -29,7 +29,6 @@ public class KPIReportService {
     @Autowired
     private InventoryRepository inventoryRepository;
 
-    // KPI Thresholds
     private static final double SHRINKAGE_THRESHOLD = 5.0;
     private static final double MIN_STOCK_TURNOVER  = 2.0;
     private static final double MIN_SALES_GROWTH    = 0.0;
@@ -38,29 +37,29 @@ public class KPIReportService {
     // ── SAVE — computes KPIs from real data ───────────────────────────────────
     public KPIReportResponseDTO saveReport(KPIReportRequestDTO dto) {
 
-        // Step 1 — Query Sale table twice for both periods
+        // Step 1 — Query Sale table for both periods
         Double currentSales  = saleRepository.getSalesInPeriod(
                 dto.getCurrentStart(), dto.getCurrentEnd());
         Double previousSales = saleRepository.getSalesInPeriod(
                 dto.getPreviousStart(), dto.getPreviousEnd());
 
         // Step 2 — Compute Sales Growth
-        // formula: (current - previous) / previous × 100
+        // formula: (current - previous) / previous x 100
         Double salesGrowth = (previousSales != null && previousSales > 0)
                 ? ((currentSales - previousSales) / previousSales) * 100
                 : 0.0;
 
         // Step 3 — Compute Stock Turnover
-        // formula: total sales / average inventory on hand
-        Double avgInventory  = inventoryRepository.getAverageInventory();
-        Double stockTurnover = (avgInventory != null && avgInventory > 0)
-                ? currentSales / avgInventory
+        // formula: total units sold / average inventory on hand
+        Double totalUnitsSold = saleRepository.getTotalUnitsSoldInPeriod(
+                dto.getCurrentStart(), dto.getCurrentEnd());
+        Double avgInventory   = inventoryRepository.getAverageInventory();
+        Double stockTurnover  = (avgInventory != null && avgInventory > 0)
+                ? totalUnitsSold / avgInventory
                 : 0.0;
 
         // Step 4 — Compute Shrinkage Rate
-        // formula: (safetyStock - quantityOnHand) / safetyStock × 100
-        // only positive when actual stock is LESS than safety stock
-        // surplus stock (actual > safety) is treated as 0 not negative
+        // formula: (safetyStock - quantityOnHand) / safetyStock x 100
         Double recorded      = inventoryRepository.getRecordedInventory();
         Double actual        = inventoryRepository.getActualInventory();
         Double shrinkageRate = (recorded != null && recorded > 0 && recorded > actual)
@@ -72,7 +71,7 @@ public class KPIReportService {
         salesGrowth   = round(salesGrowth);
         shrinkageRate = round(shrinkageRate);
 
-        // Step 6 — Build metrics summary string automatically
+        // Step 6 — Build metrics summary string
         String metrics = String.format(
                 "Stock Turnover: %.2f | Sales Growth: %.1f%% | Shrinkage: %.1f%%",
                 stockTurnover, salesGrowth, shrinkageRate);
@@ -147,7 +146,7 @@ public class KPIReportService {
     }
 
 
-    // ── SOFT DELETE — sets status to ARCHIVED ────────────────────────────────
+    // ── SOFT DELETE ───────────────────────────────────────────────────────────
     public void deleteReport(Long id) {
         KPIReport report = kpiReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -165,7 +164,6 @@ public class KPIReportService {
 
         report.setScope(dto.getScope());
 
-        // If date ranges provided — recompute KPIs
         if (dto.getCurrentStart() != null && dto.getCurrentEnd() != null
                 && dto.getPreviousStart() != null && dto.getPreviousEnd() != null) {
 
@@ -178,9 +176,11 @@ public class KPIReportService {
                     ? ((currentSales - previousSales) / previousSales) * 100
                     : 0.0;
 
-            Double avgInventory  = inventoryRepository.getAverageInventory();
-            Double stockTurnover = (avgInventory != null && avgInventory > 0)
-                    ? currentSales / avgInventory
+            Double totalUnitsSold = saleRepository.getTotalUnitsSoldInPeriod(
+                    dto.getCurrentStart(), dto.getCurrentEnd());
+            Double avgInventory   = inventoryRepository.getAverageInventory();
+            Double stockTurnover  = (avgInventory != null && avgInventory > 0)
+                    ? totalUnitsSold / avgInventory
                     : 0.0;
 
             Double recorded      = inventoryRepository.getRecordedInventory();
@@ -207,7 +207,6 @@ public class KPIReportService {
             report.setPreviousEnd(dto.getPreviousEnd());
 
         } else if (dto.getMetrics() != null) {
-            // If no date ranges — just update metrics string manually
             report.setMetrics(dto.getMetrics());
         }
 
