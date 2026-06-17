@@ -66,17 +66,17 @@ public class KPIReportService {
                 ? ((recorded - actual) / recorded) * 100
                 : 0.0;
 
-        // Step 5 — Round all values to 2 decimal places
+
         stockTurnover = round(stockTurnover);
         salesGrowth   = round(salesGrowth);
         shrinkageRate = round(shrinkageRate);
 
-        // Step 6 — Build metrics summary string
+
         String metrics = String.format(
                 "Stock Turnover: %.2f | Sales Growth: %.1f%% | Shrinkage: %.1f%%",
                 stockTurnover, salesGrowth, shrinkageRate);
 
-        // Step 7 — Build entity and save
+
         KPIReport report = new KPIReport();
         report.setScope(dto.getScope());
         report.setMetrics(metrics);
@@ -94,7 +94,7 @@ public class KPIReportService {
     }
 
 
-    // ── GET BY ID ─────────────────────────────────────────────────────────────
+
     public KPIReportResponseDTO getById(Long id) {
         KPIReport report = kpiReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -103,7 +103,7 @@ public class KPIReportService {
     }
 
 
-    // ── GET ALL ───────────────────────────────────────────────────────────────
+
     public List<KPIReportResponseDTO> getAllReports() {
         return kpiReportRepository.findAll()
                 .stream()
@@ -112,7 +112,7 @@ public class KPIReportService {
     }
 
 
-    // ── GET LATEST BY SCOPE ───────────────────────────────────────────────────
+
     public KPIReportResponseDTO getLatestByScope(String scope) {
         KPIReport report = kpiReportRepository
                 .findFirstByScopeOrderByGeneratedDateDesc(scope);
@@ -124,7 +124,7 @@ public class KPIReportService {
     }
 
 
-    // ── GET TREND DATA ────────────────────────────────────────────────────────
+
     public List<KPIReportResponseDTO> getTrendData(String scope, int lastXDays) {
         LocalDate startDate = LocalDate.now().minusDays(lastXDays);
         return kpiReportRepository
@@ -135,7 +135,7 @@ public class KPIReportService {
     }
 
 
-    // ── GET BY DATE RANGE ─────────────────────────────────────────────────────
+
     public List<KPIReportResponseDTO> getByDateRange(
             LocalDate start, LocalDate end) {
         return kpiReportRepository
@@ -146,7 +146,7 @@ public class KPIReportService {
     }
 
 
-    // ── SOFT DELETE ───────────────────────────────────────────────────────────
+
     public void deleteReport(Long id) {
         KPIReport report = kpiReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -156,7 +156,7 @@ public class KPIReportService {
     }
 
 
-    // ── UPDATE ────────────────────────────────────────────────────────────────
+
     public KPIReportResponseDTO updateReport(Long id, KPIReportRequestDTO dto) {
         KPIReport report = kpiReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -214,7 +214,7 @@ public class KPIReportService {
     }
 
 
-    // ── PAGINATION ────────────────────────────────────────────────────────────
+
     public Page<KPIReportResponseDTO> getAllPagesWithPagination(
             int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -223,7 +223,7 @@ public class KPIReportService {
     }
 
 
-    // ── MAP ENTITY TO DTO ─────────────────────────────────────────────────────
+
     private KPIReportResponseDTO mapToDTO(KPIReport r) {
         KPIReportResponseDTO dto = new KPIReportResponseDTO();
         dto.setReportId(r.getReportId());
@@ -242,7 +242,7 @@ public class KPIReportService {
     }
 
 
-    // ── ROUND TO 2 DECIMAL PLACES ─────────────────────────────────────────────
+
     private Double round(Double value) {
         if (value == null) return 0.0;
         return Math.round(value * 100.0) / 100.0;
