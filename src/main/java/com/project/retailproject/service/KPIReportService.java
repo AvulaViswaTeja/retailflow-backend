@@ -34,23 +34,23 @@ public class KPIReportService {
     private static final double MIN_SALES_GROWTH    = 0.0;
 
 
-    // ── SAVE — computes KPIs from real data ───────────────────────────────────
+    //SAVE computes KPIs from real data
     public KPIReportResponseDTO saveReport(KPIReportRequestDTO dto) {
 
-        // Step 1 — Query Sale table for both periods
+        //  Query Sale table for both periods
         Double currentSales  = saleRepository.getSalesInPeriod(
                 dto.getCurrentStart(), dto.getCurrentEnd());
         Double previousSales = saleRepository.getSalesInPeriod(
                 dto.getPreviousStart(), dto.getPreviousEnd());
 
-        // Step 2 — Compute Sales Growth
-        // formula: (current - previous) / previous x 100
+
+        // Sales Growth: (current - previous) / previous x 100
         Double salesGrowth = (previousSales != null && previousSales > 0)
                 ? ((currentSales - previousSales) / previousSales) * 100
                 : 0.0;
 
-        // Step 3 — Compute Stock Turnover
-        // formula: total units sold / average inventory on hand
+
+        // Stock Turnover: total units sold / average inventory on hand
         Double totalUnitsSold = saleRepository.getTotalUnitsSoldInPeriod(
                 dto.getCurrentStart(), dto.getCurrentEnd());
         Double avgInventory   = inventoryRepository.getAverageInventory();
@@ -58,8 +58,8 @@ public class KPIReportService {
                 ? totalUnitsSold / avgInventory
                 : 0.0;
 
-        // Step 4 — Compute Shrinkage Rate
-        // formula: (safetyStock - quantityOnHand) / safetyStock x 100
+
+        // Shrinkage Rate: (safetyStock - quantityOnHand) / safetyStock x 100
         Double recorded      = inventoryRepository.getRecordedInventory();
         Double actual        = inventoryRepository.getActualInventory();
         Double shrinkageRate = (recorded != null && recorded > 0 && recorded > actual)
