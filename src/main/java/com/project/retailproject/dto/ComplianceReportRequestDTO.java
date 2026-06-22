@@ -7,7 +7,7 @@ public class ComplianceReportRequestDTO {
     @NotBlank(message = "Scope is required")
     private String scope;
 
-    // metrics is optional — system generates it from KPI values
+
     private String metrics;
 
     public String getScope() { return scope; }

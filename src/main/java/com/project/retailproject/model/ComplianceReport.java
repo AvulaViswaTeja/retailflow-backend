@@ -23,10 +23,10 @@ public class ComplianceReport {
     // status now holds PASS / WARNING / FAIL
     private String status;
 
-    // NEW — explains which threshold failed
+
     private String remarks;
 
-    // NEW — individual KPI values parsed from metrics
+    // individual KPI values parsed from metrics
     private Double stockTurnover;
     private Double salesGrowth;
     private Double shrinkageRate;
